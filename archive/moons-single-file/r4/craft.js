@@ -1,0 +1,132 @@
+/* ---------------- smooth mesh builder (HIGH craft; illustrative): surfaces of revolution with averaged normals and preserved creases, tubes, boxes, double-sided sheets ---------------- */
+function SM(){this.p=[];this.n=[];this.c=[];this.L=[];this.id()}
+SM.prototype.id=function(){this.o=[0,0,0];this.ex=[1,0,0];this.ey=[0,1,0];this.ez=[0,0,1];return this};
+SM.prototype.frame=function(o,ez,exh){const zl=Math.hypot(ez[0],ez[1],ez[2])||1,z=[ez[0]/zl,ez[1]/zl,ez[2]/zl];let x=exh||(Math.abs(z[2])<.9?[0,0,1]:[1,0,0]);const dt=x[0]*z[0]+x[1]*z[1]+x[2]*z[2];x=[x[0]-dt*z[0],x[1]-dt*z[1],x[2]-dt*z[2]];const xl=Math.hypot(x[0],x[1],x[2])||1;x=[x[0]/xl,x[1]/xl,x[2]/xl];
+  this.o=o;this.ex=x;this.ez=z;this.ey=[z[1]*x[2]-z[2]*x[1],z[2]*x[0]-z[0]*x[2],z[0]*x[1]-z[1]*x[0]];return this};
+SM.prototype.v=function(x,y,z,nx,ny,nz,col){const o=this.o,a=this.ex,b=this.ey,c=this.ez;this.p.push(o[0]+a[0]*x+b[0]*y+c[0]*z,o[1]+a[1]*x+b[1]*y+c[1]*z,o[2]+a[2]*x+b[2]*y+c[2]*z);this.n.push(a[0]*nx+b[0]*ny+c[0]*nz,a[1]*nx+b[1]*ny+c[1]*nz,a[2]*nx+b[2]*ny+c[2]*nz);this.c.push(col[0],col[1],col[2])};
+/* prof: [[r,z],...] traversed so that the outside is on the right (axis-bottom -> out -> up -> axis-top); col: [r,g,b] or (profileSegment, azimuthSegment) -> [r,g,b];
+   opt.crease: cosine below which adjacent profile segments keep separate normals (sharp edge, default 0.8); opt.flat: faceted around the axis; opt.dbl: also emit the inside */
+SM.prototype.lathe=function(prof,segs,col,opt){opt=opt||{};const n=prof.length,sn=[],cr=opt.crease===undefined?.8:opt.crease;
+  for(let k=0;k<n-1;k++){const dr=prof[k+1][0]-prof[k][0],dz=prof[k+1][1]-prof[k][1],L=Math.hypot(dr,dz)||1;sn.push([dz/L,-dr/L])}
+  const vn=(k,j)=>{if(j<0||j>=n-1)return sn[k];const A=sn[k],B=sn[j];if(A[0]*B[0]+A[1]*B[1]<cr)return A;const x=A[0]+B[0],y=A[1]+B[1],L=Math.hypot(x,y)||1;return [x/L,y/L]};
+  for(let k=0;k<n-1;k++){const A=prof[k],B=prof[k+1];if(A[0]===0&&B[0]===0)continue;const nA=vn(k,k-1),nB=vn(k,k+1);
+    for(let j=0;j<segs;j++){const t0=TAU*j/segs,t1=TAU*(j+1)/segs,tm=(t0+t1)/2;const c0=Math.cos(t0),s0=Math.sin(t0),c1=Math.cos(t1),s1=Math.sin(t1),f0c=opt.flat?Math.cos(tm):c0,f0s=opt.flat?Math.sin(tm):s0,f1c=opt.flat?Math.cos(tm):c1,f1s=opt.flat?Math.sin(tm):s1;const cc=typeof col==='function'?col(k,j):col;
+      const V=[[A[0]*c0,A[0]*s0,A[1],nA[0]*f0c,nA[0]*f0s,nA[1]],[A[0]*c1,A[0]*s1,A[1],nA[0]*f1c,nA[0]*f1s,nA[1]],[B[0]*c1,B[0]*s1,B[1],nB[0]*f1c,nB[0]*f1s,nB[1]],[B[0]*c0,B[0]*s0,B[1],nB[0]*f0c,nB[0]*f0s,nB[1]]];
+      const T=[];if(A[0]!==0)T.push(0,1,2);if(B[0]!==0)T.push(0,2,3);
+      for(const i of T){const q=V[i];this.v(q[0],q[1],q[2],q[3],q[4],q[5],cc)}
+      if(opt.dbl)for(let i=T.length-1;i>=0;i--){const q=V[T[i]];this.v(q[0],q[1],q[2],-q[3],-q[4],-q[5],cc)}}}
+  return this};
+SM.prototype.tube=function(a,b,r,segs,col){const s=[this.o,this.ex,this.ey,this.ez];const d=[b[0]-a[0],b[1]-a[1],b[2]-a[2]],L=Math.hypot(d[0],d[1],d[2]);this.frame(a,d).lathe([[0,0],[r,0],[r,L],[0,L]],segs,col);this.o=s[0];this.ex=s[1];this.ey=s[2];this.ez=s[3];return this};
+SM.prototype.ball=function(c,r,col,segs){const s=[this.o,this.ex,this.ey,this.ez];segs=segs||20;const pr=[];for(let i=0;i<=segs/2;i++){const t=Math.PI*i/(segs/2);pr.push([i===0||i===segs/2?0:r*Math.sin(t),-r*Math.cos(t)])}this.frame(c,[0,0,1]).lathe(pr,segs,col,{crease:-1});this.o=s[0];this.ex=s[1];this.ey=s[2];this.ez=s[3];return this};
+SM.prototype.box=function(cx,cy,cz,sx,sy,sz,col){const hx=sx/2,hy=sy/2,hz=sz/2;
+  const F=[[1,0,0,[[1,-1,-1],[1,1,-1],[1,1,1],[1,-1,1]]],[-1,0,0,[[-1,-1,1],[-1,1,1],[-1,1,-1],[-1,-1,-1]]],[0,1,0,[[-1,1,-1],[-1,1,1],[1,1,1],[1,1,-1]]],[0,-1,0,[[-1,-1,1],[-1,-1,-1],[1,-1,-1],[1,-1,1]]],[0,0,1,[[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]]],[0,0,-1,[[-1,1,-1],[1,1,-1],[1,-1,-1],[-1,-1,-1]]]];
+  for(const [nx,ny,nz,v] of F)for(const i of [0,1,2,0,2,3]){const q=v[i];this.v(cx+q[0]*hx,cy+q[1]*hy,cz+q[2]*hz,nx,ny,nz,col)}return this};
+SM.prototype.sheet=function(P0,P1,P2,P3,col){const ux=P1[0]-P0[0],uy=P1[1]-P0[1],uz=P1[2]-P0[2],vx=P3[0]-P0[0],vy=P3[1]-P0[1],vz=P3[2]-P0[2];let nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx;const L=Math.hypot(nx,ny,nz)||1;nx/=L;ny/=L;nz/=L;
+  for(const q of [P0,P1,P2,P0,P2,P3])this.v(q[0],q[1],q[2],nx,ny,nz,col);for(const q of [P0,P2,P1,P0,P3,P2])this.v(q[0],q[1],q[2],-nx,-ny,-nz,col);return this};
+SM.prototype.line=function(a,b){this.L.push(a[0],a[1],a[2],b[0],b[1],b[2]);return this};
+SM.prototype.build=function(){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(this.p,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(this.n,3));g.setAttribute('color',new THREE.Float32BufferAttribute(this.c,3));return g};
+SM.prototype.buildLines=function(){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(this.L,3));g.userData.lines=true;return g};
+const M2KM=0.001;
+function craftMat(){return TIER==='HIGH'?new THREE.MeshStandardMaterial({vertexColors:true,roughness:.7,metalness:.2}):new THREE.MeshLambertMaterial({vertexColors:true})}
+/* Dimensions used by both tiers (metres).
+   Orbiter: height 6.15 (GO_SPACECRAFT_DESC_INST.TXT), HGA 4.8, science boom to 3, MAG boom to 11 from the centreline, MAG sensors at the boom midpoint and outboard end.
+   Probe: base diameter 1.2192 = 8 x 6 in, from NASA RP-1130 "two one-eighth-scale models (6-in. diameter) of the Galileo Entry Probe aeroshell" (computed here); forebody "45° half-angle cone" and "short cylinder" (RP-1130);
+   height 0.9 (JPL Mission and Spacecraft Library: "Probe height 0.9 m"); parachute projected diameter 2.5 (GPHOST.CAT). Everything else is illustrative. */
+const ORB_ZTOP=-3.6, ORB_ZBOT=2.55, PROBE_D=8*6*.0254, PROBE_H=.9, CHUTE_D=2.5, CHUTE_TRAIL=8*PROBE_D, CHUTE_GORES=20, CHUTE_RIBBONS=16;
+const HGA_HUB_Z=-1.48, HGA_HUB_R=.28, HGA_RIB=2.15, HGA_STUCK=[4,5,6];   /* hub position and rib length illustrative, chosen so that the ribs held near the tower stay below the tower tip */
+function hgaRib(i,s){const a=i/18*TAU,ang=(HGA_STUCK.includes(i)?12:38)*RAD,rr=HGA_HUB_R+s*Math.sin(ang);return [rr*Math.cos(a),rr*Math.sin(a),HGA_HUB_Z-s*Math.cos(ang)]}   /* rib angles illustrative ("ribs only partly deployed") */
+/* Galileo orbiter, +Z = rotor spin axis (+Zr), HGA at the -Z end ("+Zr directed opposite to the HGA boresight direction"), science/MAG boom along +Y; despun section at the +Z end (Meltzer Fig. 5.8 caption: "despun section (at the bottom of the spacecraft drawing)") */
+function buildOrbiter(){if(TIER==='HIGH')return buildOrbiterHi();
+  const v=new Vox();const gold=[.80,.62,.25],white=[.86,.86,.84],dark=[.22,.22,.24],grey=[.55,.56,.58],black=[.1,.1,.11],blk=[.3,.3,.33];
+  v.cyl(0,0,-.87,1.0,.64,'z',black,.25);                                 /* spun bus (illustrative diameter) */
+  v.cyl(0,0,.15,.6,1.45,'z',dark,.3);                                    /* propulsion module */
+  for(let i=0;i<8;i++){const a=i/8*TAU+.39;v.box(.72*Math.cos(a),.72*Math.sin(a),.15,.4,.4,.7,gold)}
+  v.cyl(0,0,1.2,.75,.65,'z',white,.2);v.box(1.1,-1.0,1.15,.9,.6,.6,grey);v.box(1.7,-1.4,1.15,.5,.5,.5,dark);   /* despun section and scan platform (illustrative size and placement) */
+  v.cyl(-1.2,.7,1.75,.5,.08,'z',white,.12);v.box(-1.2,.7,1.55,.08,.08,.4,grey);                                /* probe relay antenna, illustrative */
+  v.cyl(0,0,1.8,.3,.5,'z',grey,.15);v.cyl(0,0,2.3,.42,.5,'z',dark,.14);  /* 400 N engine (one, document); nozzle exit at +2.55 */
+  /* HGA: 4.8 m antenna at -Z, drawn partly deployed; tower tip (LGA) at -3.6 so that the height is 6.15 m */
+  v.box(0,0,-2.45,.14,.14,2.1,grey);v.cyl(0,0,-1.32,.5,.25,'z',dark,.12);
+  for(let i=0;i<18;i++){const n=6;for(let k=0;k<n;k++){const p=hgaRib(i,(k+.5)/n*HGA_RIB);v.box(p[0],p[1],p[2],.25,.25,HGA_RIB/n*.85,k%2?white:grey)}}   /* box size chosen so that successive rib boxes touch */
+  v.cyl(0,0,-3.5,.25,.2,'z',white,.12);                                  /* LGA at the tip, illustrative */
+  /* science boom to 3 m (+Y), MAG boom to 11 m from the centreline (document) */
+  v.box(0,2.0,0,.25,2.2,.25,blk);for(let i=0;i<5;i++)v.box((i%2?.12:-.12),1.3+i*.4,0,.06,.06,.5,grey);
+  v.box(.25,2.9,.15,.45,.5,.4,white);v.box(-.3,2.6,-.2,.4,.4,.35,grey);v.box(0,3.1,-.3,.35,.35,.3,dark);  /* EPD/DDS/HIC/PLS boxes, illustrative placement */
+  for(let y=3.0;y<10.9;y+=.4){v.box(0,y+.2,0,.05,.4,.05,grey);v.box(.08,y+.2,.08,.03,.4,.03,white);v.box(-.08,y+.2,-.08,.03,.4,.03,white);if(Math.round(y*10)%8===0)v.box(0,y+.2,0,.18,.05,.18,grey)}
+  v.box(0,7.0,0,.22,.3,.22,[.9,.3,.2]);v.box(0,10.85,0,.22,.3,.22,[.9,.3,.2]);   /* MAG sensors: midpoint and outboard end (document) */
+  v.box(0,10.975,0,2.4,.05,.05,white);                                    /* PWS antenna, illustrative */
+  /* RTG booms (two), length illustrative */
+  for(const s of [1,-1]){const a=s>0?-35*RAD:215*RAD;for(let k=0;k<9;k++){const r=.9+k*.42;v.box(r*Math.cos(a),r*Math.sin(a),.2,.12,.12,.12,grey)}const r=4.9;v.cyl(r*Math.cos(a),r*Math.sin(a),.2,.22,1.1,'x',black,.11);for(let k=0;k<6;k++)v.box(r*Math.cos(a)+(k-2.5)*.18,r*Math.sin(a),.2,.06,.7,.7,dark)}
+  /* two 10-N thruster clusters on cantilevered booms (six each, document) */
+  for(const s of [1,-1]){v.box(s*1.7,0,-.15,1.9,.1,.1,grey);for(let k=0;k<6;k++)v.box(s*2.7+(k%3-1)*.15,(k<3?.12:-.12),-.15+(k<3?.1:-.1),.08,.08,.14,white)}
+  return v.build()}
+function buildOrbiterHi(){const s=new SM();const blk=[.07,.07,.08],gold=[.80,.60,.22],white=[.88,.88,.86],grey=[.55,.56,.58],dark=[.2,.2,.22],sil=[.75,.77,.8],red=[.85,.28,.18],mesh=[.66,.63,.52];
+  /* HGA tower, tip sunshade and LGA; tower tip at -3.6 */
+  s.lathe([[0,-3.6],[.1,-3.6],[.1,-3.46],[.36,-3.44],[.36,-3.4],[.06,-3.38],[.06,HGA_HUB_Z-.03],[HGA_HUB_R,HGA_HUB_Z],[HGA_HUB_R,-1.22],[0,-1.22]],28,k=>k<2?white:k<5?blk:k<6?grey:dark);
+  /* 18 ribs (press kit) and the mesh between them, drawn partly deployed; three adjacent ribs held near the tower (which ribs, and all angles: illustrative) */
+  const NS=10;for(let i=0;i<18;i++){const j=(i+1)%18;for(let k=0;k<NS;k++){const s0=k/NS*HGA_RIB,s1=(k+1)/NS*HGA_RIB;s.tube(hgaRib(i,s0),hgaRib(i,s1),.014,6,grey);s.sheet(hgaRib(i,s0),hgaRib(j,s0),hgaRib(j,s1),hgaRib(i,s1),(k&1)?mesh:[mesh[0]*.92,mesh[1]*.92,mesh[2]*.92])}}
+  /* bus sun shield and eight-bay spun bus (shape and size illustrative) */
+  s.lathe([[0,-1.22],[1.45,-1.22],[1.45,-1.19],[0,-1.19]],56,blk);
+  s.lathe([[0,-1.19],[.98,-1.19],[.98,-.6],[0,-.6]],8,(k,j)=>k===1&&j%4===1?gold:blk,{flat:true});
+  /* propulsion module: central cylinder, four propellant tanks, two pressurant tanks (illustrative) */
+  s.lathe([[0,-.6],[.5,-.6],[.5,.85],[0,.85]],28,dark);
+  for(let i=0;i<4;i++){const a=(45+90*i)*RAD;s.ball([.7*Math.cos(a),.7*Math.sin(a),.1],.44,gold,24)}
+  for(let i=0;i<2;i++){const a=(135+180*i)*RAD;s.ball([.62*Math.cos(a),.62*Math.sin(a),.62],.2,sil,16)}
+  /* despun section (stator), scan platform with instruments, probe relay antenna (sizes and placement illustrative) */
+  s.lathe([[0,.85],[.74,.85],[.74,1.4],[.5,1.55],[0,1.55]],36,k=>k<2?white:dark);
+  s.tube([.45,-.45,1.15],[1.25,-1.25,1.15],.06,10,grey);s.frame([1.5,-1.5,1.15],[0,0,1],[.7071,-.7071,0]);s.box(0,0,0,.6,.6,.55,white);s.box(.1,0,.4,.3,.3,.25,dark);s.id();
+  { const d=[.7071,-.7071,0];s.tube([1.72,-1.72,1.25],[2.55,-2.55,1.25],.13,20,blk);s.frame([1.7,-1.7,.95],d).lathe([[0,0],[.09,0],[.22,.4],[.2,.4],[.07,.03],[0,.03]],20,sil);s.id();s.tube([1.6,-1.95,1.2],[2.0,-2.35,1.2],.07,12,dark) }
+  s.tube([-.45,.3,1.3],[-1.2,.7,1.72],.05,10,grey);s.frame([-1.2,.7,1.72],[-.15,.1,1]).lathe([[0,.02],[.2,.05],[.4,.12],[.55,.22]],32,white,{dbl:true,crease:-1});s.id();s.tube([-1.2,.7,1.74],[-1.245,.73,2.04],.025,8,grey);
+  /* one 400-N engine (document); nozzle exit at +2.55 */
+  s.lathe([[0,1.55],[.09,1.55],[.13,1.9],[.34,2.55],[.31,2.55],[.1,1.9],[0,1.9]],28,k=>k<3?grey:dark);
+  /* science boom to 3 m with instrument boxes (placement illustrative) */
+  s.tube([0,.5,0],[0,3.0,0],.08,12,dark);s.box(.28,2.85,.16,.42,.45,.38,white);s.box(-.3,2.6,-.2,.38,.38,.34,grey);s.box(0,3.05,-.3,.34,.3,.3,blk);s.box(.05,2.2,.25,.25,.3,.25,gold);
+  /* MAG boom: triangular truss from 3 m to 11 m from the centreline; sensors at the midpoint and the outboard end (document); truss form illustrative */
+  { const R=.1,A=[90,210,330].map(d=>[R*Math.cos(d*RAD),R*Math.sin(d*RAD)]),pt=(i,y)=>[A[i][0],y,A[i][1]];for(let i=0;i<3;i++)s.tube(pt(i,3.0),pt(i,11.0),.009,5,sil);
+    for(let b=0;b<=16;b++){const y=3.0+b*.5;for(let i=0;i<3;i++){s.tube(pt(i,y),pt((i+1)%3,y),.006,4,grey);if(b<16)s.tube(pt(i,y),pt((i+(b&1?1:2))%3,y+.5),.004,4,grey)}} }
+  s.tube([0,6.9,0],[0,7.1,0],.11,14,red);s.tube([0,10.8,0],[0,11.0,0],.11,14,red);
+  s.tube([-1.2,10.985,0],[1.2,10.985,0],.012,6,white);   /* PWS antenna, illustrative */
+  /* two RTGs on booms (number: document; boom form, lengths and RTG size illustrative) */
+  for(const a of [-35*RAD,215*RAD]){const u=[Math.cos(a),Math.sin(a),0],w=[-u[1],u[0],0],at=(r,o,z)=>[u[0]*r+w[0]*o,u[1]*r+w[1]*o,z];
+    s.tube(at(.6,.35,.2),at(4.3,0,.2),.03,8,grey);s.tube(at(.6,-.35,.2),at(4.3,0,.2),.03,8,grey);s.tube(at(.5,0,-.4),at(4.3,0,.2),.02,6,grey);
+    s.frame(at(4.3,0,.2),u).lathe([[0,0],[.11,0],[.13,.04],[.13,1.1],[.11,1.14],[0,1.14]],20,blk);
+    for(let f=0;f<8;f++){const t=f/8*TAU;s.frame(at(4.3,0,.2),u,[w[0]*Math.cos(t),w[1]*Math.cos(t),Math.sin(t)]).box(.17,0,.57,.1,.012,1.0,dark)}s.id()}
+  /* two cantilevered thruster booms with six 10-N thrusters each (document); form illustrative */
+  for(const sg of [1,-1]){s.tube([sg*.5,0,-.15],[sg*2.6,0,-.15],.04,10,grey);s.box(sg*2.7,0,-.15,.24,.24,.24,sil);
+    for(const d of [[0,0,1],[0,0,-1],[0,1,0],[0,-1,0],[sg,0,0],[0,.7071,.7071]]){s.frame([sg*2.7+d[0]*.12,d[1]*.12,-.15+d[2]*.12],d).lathe([[0,0],[.02,0],[.055,.13],[.045,.13],[0,.02]],12,white)}s.id()}
+  return s.build()}
+/* probe profiles (r,z), nose at -Z; forebody: sphere-cone with 45° half-angle (RP-1130) and illustrative nose radius; short cylinder (RP-1130) of illustrative length; aft cover dome illustrative; total height 0.9 m */
+function probeProf(){const RB=PROBE_D/2,rn=.22,c45=Math.SQRT1_2,zc=-(RB-rn*c45)+rn*c45,zt=zc-rn,cyl=.06,ha=PROBE_H-(-zt)-cyl;const fore=[[0,zt]];for(let i=1;i<=8;i++){const t=i/8*Math.PI/4;fore.push([rn*Math.sin(t),zc-rn*Math.cos(t)])}fore.push([RB,0]);
+  const aft=[];for(let i=0;i<=12;i++){const t=i/12*1.3;aft.push([RB*Math.cos(t),cyl+ha*Math.sin(t)/Math.sin(1.3)])}return {RB,zt,cyl,fore,aft,top:cyl+ha}}
+const C_CARBON=[.17,.14,.12],C_AFT=[.74,.64,.48],C_RING=[.5,.5,.52],C_DM=[.78,.62,.3];
+function buildProbeEntry(){const q=probeProf();
+  if(TIER==='HIGH'){const s=new SM(),nf=q.fore.length-1;return s.lathe(q.fore.concat([[q.RB,q.cyl]],q.aft.slice(1),[[0,q.top]]),72,k=>k<nf?C_CARBON:k===nf?C_RING:C_AFT).build()}
+  const v=new Vox(),RB=q.RB;for(let k=0;k<10;k++){const z=q.zt+(k+.5)*(-q.zt)/10,r=.07+(RB-.07)*(k+.5)/10;v.cyl(0,0,z,r,-q.zt/10,'z',k%2?[.30,.26,.22]:[.40,.35,.30],r/5)}
+  v.cyl(0,0,q.cyl/2,RB,q.cyl,'z',C_RING,RB/6);const ha=q.top-q.cyl;for(let k=0;k<7;k++){const z=q.cyl+(k+.5)*ha/7,r=RB*.97*Math.cos((k+.5)/7*1.3);v.cyl(0,0,z,r,ha/7,'z',k%2?[.76,.66,.5]:[.62,.52,.4],r/5)}
+  return v.build()}
+function buildProbeDescent(){
+  if(TIER==='HIGH'){const s=new SM();s.lathe([[0,-.2],[.24,-.2],[.3,-.175],[.33,-.12],[.33,.14],[.3,.2],[.2,.24],[0,.24]],48,C_DM);s.lathe([[0,.24],[.15,.24],[.15,.275],[0,.275]],28,C_RING);
+    s.box(.2,.2,.3,.1,.1,.12,[.2,.2,.22]);s.tube([-.2,-.1,.24],[-.2,-.1,.42],.03,10,[.2,.2,.22]);for(let i=0;i<4;i++){const a=i/4*TAU+.4;s.tube([.34*Math.cos(a),.34*Math.sin(a),-.16],[.34*Math.cos(a),.34*Math.sin(a),.1],.025,8,[.25,.25,.27])}
+    s.tube([0,0,.275],[0,0,.5],.015,8,C_RING);return s.build()}   /* descent module: rounded body 0.66 m across, illustrative */
+  const v=new Vox(),gold=[.75,.6,.3],grey=[.5,.5,.52],dark=[.2,.2,.22];
+  v.cyl(0,0,0,.33,.42,'z',gold,.1);v.cyl(0,0,.26,.25,.1,'z',grey,.1);v.box(.2,.2,.33,.1,.1,.12,dark);v.box(-.2,-.1,.33,.08,.08,.18,dark);
+  for(let i=0;i<4;i++){const a=i/4*TAU+.4;v.box(.34*Math.cos(a),.34*Math.sin(a),-.1,.06,.06,.3,dark)}
+  v.box(0,0,.45,.04,.04,.2,grey);
+  return v.build()}
+/* main parachute: projected diameter 2.5 m (GPHOST.CAT); "conventional conical ribbon design" (Rodier, Thuss, Terhune 1982 abstract, NTRS 19820026891) drawn as rings of ribbon with slots between them;
+   canopy depth, number of ribbons and gores, colours, line lengths and the trailing distance (8 probe diameters, inside the 5.5-11 range tested, Meltzer ch. 3) are illustrative */
+function chuteProf(u){const RC=CHUTE_D/2;return [RC*Math.cos(u*1.45),CHUTE_TRAIL+.8*Math.sin(u*1.45)/Math.sin(1.45)]}
+const CHUTE_CONF=CHUTE_TRAIL-3.0;
+function buildChute(){const RC=CHUTE_D/2,or=[.95,.45,.15],wh=[.92,.9,.86];
+  if(TIER==='HIGH'){const s=new SM(),NA=CHUTE_GORES*4;for(let i=0;i<CHUTE_RIBBONS;i++){const pr=[];for(let k=0;k<=3;k++)pr.push(chuteProf((i+.74*k/3)/CHUTE_RIBBONS));s.lathe(pr,NA,(k,j)=>{const g=Math.floor(j/4),c=g%2?or:wh;return j%4===0?[c[0]*.82,c[1]*.82,c[2]*.82]:c},{dbl:true,crease:-1})}
+    return s.build()}
+  const v=new Vox();for(let k=0;k<10;k++){const t=(k+.5)/10,z=CHUTE_TRAIL+Math.sin(t*1.5)*.85,r=RC*Math.cos(t*1.5);const n=Math.max(8,Math.ceil(TAU*r/.09));for(let i=0;i<n;i++){const a=i/n*TAU;v.box(r*Math.cos(a),r*Math.sin(a),z,.11,.11,.13,(Math.floor(i/(n/8))%2)?or:wh)}}
+  for(let i=0;i<8;i++){const a=i/8*TAU;for(let k=0;k<6;k++){const t=(k+.5)/6;v.box(RC*.97*Math.cos(a)*(1-t),RC*.97*Math.sin(a)*(1-t),CHUTE_TRAIL-.05-3.0*t,.035,.035,.52,[.85,.85,.8])}}
+  for(let k=0;k<7;k++){const L=(CHUTE_CONF-.5)/7;v.box(0,0,.5+(k+.5)*L,.035,.035,L,[.85,.85,.8])}
+  return v.build()}
+/* HIGH: suspension lines, radial tapes, riser and bridle as line segments */
+function buildChuteLines(){const s=new SM(),RC=CHUTE_D/2;for(let g=0;g<CHUTE_GORES;g++){const a=g/CHUTE_GORES*TAU,ca=Math.cos(a),sa=Math.sin(a);s.line([RC*ca,RC*sa,CHUTE_TRAIL],[0,0,CHUTE_CONF]);for(let k=0;k<24;k++){const A=chuteProf(k/24),B=chuteProf((k+1)/24);s.line([A[0]*ca,A[0]*sa,A[1]],[B[0]*ca,B[0]*sa,B[1]])}}
+  s.line([0,0,CHUTE_CONF],[0,0,.8]);for(let i=0;i<3;i++){const a=i/3*TAU;s.line([0,0,.8],[.26*Math.cos(a),.26*Math.sin(a),.24])}return s.buildLines()}
+function buildAftCover(){const q=probeProf();if(TIER==='HIGH')return new SM().lathe(q.aft.concat([[0,q.top]]),72,C_AFT,{dbl:true}).build();
+  const v=new Vox(),ha=q.top-q.cyl;for(let k=0;k<7;k++){const z=q.cyl+(k+.5)*ha/7,r=q.RB*.97*Math.cos((k+.5)/7*1.3);v.cyl(0,0,z,r,ha/7,'z',k%2?[.76,.66,.5]:[.62,.52,.4],r/5)}return v.build()}
+function buildAeroshell(){const q=probeProf();if(TIER==='HIGH'){const nf=q.fore.length-1;return new SM().lathe(q.fore.concat([[q.RB,q.cyl]]),72,k=>k<nf?C_CARBON:C_RING,{dbl:true}).build()}
+  const v=new Vox(),RB=q.RB;for(let k=0;k<10;k++){const z=q.zt+(k+.5)*(-q.zt)/10,r=.07+(RB-.07)*(k+.5)/10;v.cyl(0,0,z,r,-q.zt/10,'z',k%2?[.30,.26,.22]:[.40,.35,.30],r/5)}return v.build()}

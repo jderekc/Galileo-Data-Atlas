@@ -1,0 +1,23 @@
+const { chromium } = require('playwright');
+const base='/tmp/claude-0/-home-claude/59c9c79e-97f6-546e-8abd-eade5ba1a35d/scratchpad/viewer/';
+(async()=>{
+  const b = await chromium.launch({args:['--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist','--use-gl=angle']});
+  const pg = await (await b.newContext({viewport:{width:1400,height:900}})).newPage();
+  const errs=[];pg.on('pageerror',e=>errs.push('PAGEERR '+e.message));pg.on('console',m=>{if(m.type()==='error'&&!/ERR_FAILED/.test(m.text()))errs.push(m.text())});
+  await pg.route('**/*',route=>{const u=route.request().url();
+    if(u.includes('three.min.js')) return route.fulfill({path:base+'npm/node_modules/three/build/three.min.js',contentType:'application/javascript'});
+    if(u.includes('OrbitControls.js')) return route.fulfill({path:base+'npm/node_modules/three/examples/js/controls/OrbitControls.js',contentType:'application/javascript'});
+    if(u.startsWith('file://')||u.startsWith('data:')) return route.continue(); return route.abort();});
+  const L=(k,v)=>console.log(k,JSON.stringify(v));
+  await pg.goto('file://'+base+'viewer_wrapped.html'); await pg.waitForTimeout(15000);
+  const shot=async(name)=>{await pg.waitForTimeout(1500);await pg.screenshot({path:base+name})};
+  await pg.evaluate(async()=>{const V=__viewer;await V.openSeg('ORB08');V.S.TA=2e6});await shot('n_orb08.png');
+  await pg.click('button[data-gv="mission"]');await pg.waitForTimeout(25000);await shot('n_mission.png');
+  await pg.click('button[data-gv="orbit"]');
+  await pg.evaluate(async()=>{const V=__viewer;await V.openSeg('ORB33');V.S.TA=(18*3600+59*60)-(V.SG.t0ms/1000-Math.floor(V.SG.t0ms/1000/86400)*86400)});await shot('n_gap2002.png');
+  await pg.evaluate(async()=>{const V=__viewer;await V.openSeg('ORB12');V.S.TA=V.SG.dspan+20*86400});await shot('n_gap1998.png');
+  await pg.evaluate(async()=>{const V=__viewer;await V.openSeg('ORB09');V.S.TA=3e6;V.S.sel=['EPD_E1'].filter(id=>V.LAYERS.some(l=>l.id===id));});await shot('n_orb09.png');
+  await pg.click('#hudx');await shot('n_hudmin.png');
+  console.log('errs',errs.length,errs.slice(0,3));
+  await b.close();
+})();

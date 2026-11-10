@@ -1,0 +1,18 @@
+{
+  "about": "Single source of truth for body radii used by the moons viewer and, later, the atlas. radius_km is the value to draw and to take altitudes against. label_radius_km is only the unit in which the PDS moon-centred trajectory files express distance; it converts those files to km and is never used as a surface.",
+  "sources": {
+    "atlas_table": "Galileo Data Atlas body table (values chosen by the owner as the working set)",
+    "iau2015": "Archinal et al. (2018), Report of the IAU Working Group on Cartographic Coordinates and Rotational Elements: 2015, Celest. Mech. Dyn. Astr. 130:22, as listed by JPL SSD Planetary Satellite Physical Parameters (ssd.jpl.nasa.gov/sats/phys_par)",
+    "pds_label": "GO_POS_SC_MOONCRDS_DS.TXT Table 1 and the *CRDS.LBL files: distances expressed in satellite radii (RI = 1818, RE = 1560, RG = 2634, RC = 2409, Amalthea R = 86.2 km)",
+    "nssdca": "NSSDCA Jovian Satellite Fact Sheet, Radius (km) column",
+    "orbtrtrj": "GP_0001/DATA/DWE/ORBTRTRJ.TAB bodies table (REQ, RPOL); PROBETRJ.LBL JOVIAN 1-BAR RADIUS"
+  },
+  "bodies": {
+    "JUPITER": {"name": "Jupiter", "radius_eq_km": 71492.0, "radius_pol_km": 66854.0, "radius_src": "orbtrtrj"},
+    "IO": {"name": "Io", "radius_km": 1821.6, "radius_src": "atlas_table", "iau2015_mean_radius_km": 1821.49, "iau2015_sigma_km": 0.5, "nssdca_radius_km": 1821.5, "label_radius_km": 1818.0, "note": "atlas table is 0.11 km above the IAU 2015 mean radius, inside its 0.50 km uncertainty"},
+    "EUROPA": {"name": "Europa", "radius_km": 1560.8, "radius_src": "atlas_table", "iau2015_mean_radius_km": 1560.8, "iau2015_sigma_km": 0.3, "nssdca_radius_km": 1560.8, "label_radius_km": 1560.0},
+    "GANYMEDE": {"name": "Ganymede", "radius_km": 2631.2, "radius_src": "atlas_table", "iau2015_mean_radius_km": 2631.2, "iau2015_sigma_km": 1.7, "nssdca_radius_km": 2631.2, "label_radius_km": 2634.0},
+    "CALLISTO": {"name": "Callisto", "radius_km": 2410.3, "radius_src": "atlas_table", "iau2015_mean_radius_km": 2410.3, "iau2015_sigma_km": 1.5, "nssdca_radius_km": 2410.3, "label_radius_km": 2409.0},
+    "AMALTHEA": {"name": "Amalthea", "radius_km": 83.5, "radius_src": "atlas_table", "iau2015_mean_radius_km": 83.5, "iau2015_sigma_km": 3.0, "triaxial_radii_km": [125, 73, 64], "triaxial_src": "nssdca", "label_radius_km": 86.2, "note": "radius_km is the mean radius; the body is drawn as the triaxial figure"}
+  }
+}

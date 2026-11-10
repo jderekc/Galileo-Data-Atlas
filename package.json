@@ -1,0 +1,17 @@
+{
+  "name": "galileo-data-atlas",
+  "version": "0.7.0",
+  "private": true,
+  "description": "Galileo Data Atlas web app. Stage 1: the moons and craft viewer as ES modules.",
+  "scripts": {
+    "serve": "python3 -m http.server 8080",
+    "test": "node tests/allscenes.js",
+    "test:compare": "node tests/compare_single_file.js",
+    "test:load": "node tests/first_load.js",
+    "split": "python3 tools/split_single_file.py legacy/moons_template.html public/data/moons_pack.json public/data/bodies.json node_modules/three"
+  },
+  "devDependencies": {
+    "playwright": "^1.40.0",
+    "three": "0.147.0"
+  }
+}

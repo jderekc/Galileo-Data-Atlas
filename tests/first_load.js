@@ -1,0 +1,8 @@
+// First-load transfer: files requested and their sizes (raw and gzip -9 estimate) for a flyby scene and the probe scene; also checks that the module worker builds a texture.
+const { chromium, ARGS, open, BASE } = require('./_lib'); const zlib = require('zlib'); const fs = require('fs'); const path = require('path'); const ROOT = path.join(__dirname, '..');
+(async () => { const b = await chromium.launch({ args: ARGS });
+  for (const [nm, hash] of [['flyby E4, LOW', '#FLY:E4&tier=LOW'], ['probe, LOW', '#PROBE&tier=LOW'], ['flyby E4, HIGH', '#FLY:E4&tier=HIGH']]) { const pg = await open(b, hash); await pg.waitForTimeout(2500);
+    if (hash.includes('HIGH')) { await pg.evaluate(() => { const M = window.__moons; M.setFollow('EUROPA'); M.zoomTo('local') }); for (let i = 0; i < 120; i++) { const q = await pg.evaluate(() => window.__moons.hiq); if (q.done && !q.left) break; await pg.waitForTimeout(1000) } console.log('  worker:', JSON.stringify(await pg.evaluate(() => window.__moons.hiq))) }
+    let raw = 0, gz = 0; const rows = []; for (const r of pg.reqs) { const f = path.join(ROOT, r.url.split('#')[0].split('?')[0] || 'index.html'); if (!fs.existsSync(f) || fs.statSync(f).isDirectory()) continue; const d = fs.readFileSync(f), g = zlib.gzipSync(d, { level: 9 }).length; raw += d.length; gz += g; rows.push(`${r.url || 'index.html'} ${d.length} ${g}`) }
+    console.log(nm, '| files', rows.length, '| raw bytes', raw, '| gzip bytes', gz, '| errors', pg.errs.length); if (nm.startsWith('flyby E4, LOW')) console.log(rows.map(x => '   ' + x).join('\n')); await pg.close() }
+  await b.close() })();

@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Orbiter Attitude Prototype</title>
+<style>
+:root{--bg:#f6f5f1;--panel:#fff;--ink:#1d1f22;--mut:#5d6168;--line:#d9d7d0;--grid:#ebe9e3;--acc:#2a5db0;--jup:#c46a1b;--sun:#b8930a;--pole:#777;--warn:#9a2b2b;--rotor:#3c6db8;--plume:#e0571a}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15171a;--panel:#1d2024;--ink:#e7e6e1;--mut:#a2a6ad;--line:#33373d;--grid:#2a2e33;--acc:#7aa5ee;--jup:#f0a060;--sun:#f2d45c;--pole:#aaa;--warn:#e57373;--rotor:#7aa5ee;--plume:#ff8a50}}
+:root[data-theme="dark"]{--bg:#15171a;--panel:#1d2024;--ink:#e7e6e1;--mut:#a2a6ad;--line:#33373d;--grid:#2a2e33;--acc:#7aa5ee;--jup:#f0a060;--sun:#f2d45c;--pole:#aaa;--warn:#e57373;--rotor:#7aa5ee;--plume:#ff8a50}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{padding:14px 16px 8px;border-bottom:1px solid var(--line)}
+h1{font-size:18px;margin:0 0 2px;font-weight:650}
+.sub{color:var(--mut);font-size:12.5px}
+.wrap{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:12px;padding:12px 16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-width:0}
+.card h2{font-size:13px;margin:4px 0 6px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);font-weight:600}
+#view{position:relative;width:100%;height:520px;border-radius:6px;overflow:hidden;background:#0d1015}
+#view canvas{display:block}
+.legend{position:absolute;left:8px;top:8px;font-size:11.5px;color:#dfe3ea;background:rgba(10,12,16,.6);padding:6px 8px;border-radius:6px;line-height:1.5;max-width:60%}
+.legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:5px}
+.scrub{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:13px}
+.scrub input[type=range]{flex:1 1 200px;min-width:0}
+button,select{font:inherit;font-size:13px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:3px 8px;cursor:pointer}
+button[disabled]{opacity:.55;cursor:not-allowed}
+table{border-collapse:collapse;font-size:12.5px;width:100%}td,th{border-bottom:1px solid var(--line);padding:3px 6px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
+th{color:var(--mut);font-weight:600}
+.hint{font-size:11.5px;color:var(--mut)}
+.tag{white-space:nowrap;display:inline-block;font-size:11px;border:1px solid var(--line);border-radius:4px;padding:0 5px;color:var(--mut);margin-right:4px}
+.tag.m{border-color:var(--acc);color:var(--acc)}.tag.s{border-style:dashed}
+blockquote{margin:6px 0;padding:4px 10px;border-left:3px solid var(--line);font-size:13px}
+blockquote cite{display:block;color:var(--mut);font-size:11.5px;font-style:normal;margin-top:2px}
+code{font-size:11.5px;overflow-wrap:anywhere}
+.full{grid-column:1/-1}
+canvas.plot{width:100%;display:block}
+textarea{width:100%;min-height:90px;font:11.5px ui-monospace,monospace;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:5px}
+.dot{display:inline-block;width:11px;height:11px;border-radius:50%;border:2px solid var(--plume);vertical-align:middle}
+.dot.f{background:var(--plume)}
+tr.sel{background:rgba(120,140,200,.15)}
+@media (max-width:980px){.wrap{grid-template-columns:1fr}#view{height:380px}}
+@media (max-width:600px){.legend{font-size:10px;max-width:58%;padding:3px 5px;opacity:.85}}
+</style>
+</head>
+<body>
+<header>
+<h1>Galileo orbiter attitude, Europa-4 flyby window (prototype)</h1>
+<div class="sub">Orientation comes only from the rotor attitude table. The spacecraft shape is a schematic drawn from published descriptions, not a CAD model. Tags: <span class="tag m">measured</span> = a value from a named PDS file; <span class="tag s">schematic</span> = illustrative geometry; <span class="tag">quoted</span> = published text.</div>
+</header>
+<div class="wrap">
+<section class="card">
+<h2>Model</h2>
+<div id="view"><div class="legend" id="legend"></div></div>
+<div class="scrub"><button id="play">Play</button><select id="speed"><option value="1">1×</option><option value="10" selected>10×</option><option value="60">60×</option></select>
+<input type="range" id="slider" min="0" max="1" value="0" step="1"><span id="tlabel" class="hint"></span></div>
+<div class="scrub"><label><input type="checkbox" id="showJ" checked> Jupiter</label><label><input type="checkbox" id="showS" checked> Sun</label><label><input type="checkbox" id="showP"> Jupiter spin pole</label><label><input type="checkbox" id="showE" checked> EME50 axes</label>
+<button disabled title="The Earth direction needs an Earth ephemeris and the Galileo SPK (NAIF), which are not in the local archive">Earth direction: needs NAIF SPK (see download plan)</button></div>
+<div class="hint" style="margin-top:6px">Display rule: each frame shows the most recent ROTATT sample at or before the scrubber time (sample-and-hold, no interpolation). Rows whose ROTOR DECLINATION is outside ±90° are shown as "no valid attitude"; there are none in this window.</div>
+</section>
+<section class="card">
+<h2>Readout at scrubber time</h2>
+<table id="ro"></table>
+<h2 style="margin-top:12px">What is measured and what is drawn</h2>
+<table id="prov"></table>
+</section>
+<section class="card">
+<h2>Spin phase: ROTATT vs MAG IRC</h2>
+<canvas class="plot" id="spinplot" height="220"></canvas>
+<div class="hint" id="spinstats"></div>
+</section>
+<section class="card">
+<h2>Frame checks (computed from the local files)</h2>
+<table id="frames"></table>
+</section>
+<section class="card full">
+<h2>Communications (sourced statements only)</h2>
+<div id="comms"></div>
+</section>
+<section class="card full">
+<h2>Burns and thruster events</h2>
+<div class="hint" style="margin-bottom:6px">Plume length (and cone width) is drawn proportional to duration × force (impulse, N·s), and brightness increases with it, only when both numbers are present in the event list. If either is missing the event gets a hollow marker and the model shows an "unknown" ring at a schematic engine location; nothing is estimated. None of the events below has a published duration in the sources read, so none draws a plume. The event list is JSON: edit it below and press Apply.</div>
+<table id="burns"></table>
+<div class="hint" id="burnsel" style="margin:6px 0"></div>
+<canvas class="plot" id="bwplot" height="200"></canvas>
+<div class="hint" id="bwnote"></div>
+<details style="margin-top:8px"><summary class="hint">Edit event JSON</summary><textarea id="bjson"></textarea><button id="bapply">Apply</button> <span id="berr" class="hint"></span></details>
+</section>
+</div>
+<script>__THREE__</script>
+<script>__ORBIT__</script>
+<script id="att" type="application/json">__ATT__</script>
+<script id="bw" type="application/json">__BURNWIN__</script>
+<script id="burnsjson" type="application/json">__BURNS__</script>
+<script>
+const A=JSON.parse(document.getElementById('att').textContent);const BW=JSON.parse(document.getElementById('bw').textContent);let BURNS=JSON.parse(document.getElementById('burnsjson').textContent);
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const N=A.t.length;const deg=r=>r*180/Math.PI;
+const valid=i=>A.dec[i]>=-Math.PI/2&&A.dec[i]<=Math.PI/2;
+// rotor->EME50 matrix exactly as written in ROTATT04.LBL (T = twist for the spinning rotor frame)
+function rotM(R,D,T){const cR=Math.cos(R),sR=Math.sin(R),cD=Math.cos(D),sD=Math.sin(D),cT=Math.cos(T),sT=Math.sin(T);
+ return[[cT*sD*cR-sT*sR,-sD*sT*cR-cT*sR,cD*cR],[cT*sD*sR+sT*cR,-sD*sT*sR+cT*cR,cD*sR],[-cD*cT,sT*cD,sD]]}
+const col=(M,j)=>[M[0][j],M[1][j],M[2][j]];const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];const nrm=a=>{const n=Math.hypot(...a);return a.map(x=>x/n)};
+const angd=(a,b)=>deg(Math.acos(Math.max(-1,Math.min(1,dot(nrm(a),nrm(b))))));
+// ---- three.js scene (world = EME50; Z up) ----
+const view=document.getElementById('view');const renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});renderer.setPixelRatio(Math.min(2,devicePixelRatio||1));view.appendChild(renderer.domElement);
+const scene=new THREE.Scene();const cam=new THREE.PerspectiveCamera(40,1,0.1,500);cam.up.set(0,0,1);
+const ctrl=new THREE.OrbitControls(cam,renderer.domElement);ctrl.target.set(0,0,0);
+scene.add(new THREE.AmbientLight(0xffffff,0.55));const dl=new THREE.DirectionalLight(0xffffff,0.8);scene.add(dl);
+const mat=(c,o)=>new THREE.MeshStandardMaterial(Object.assign({color:c,metalness:0.1,roughness:0.7},o||{}));
+function line(pts,c,dashed){const g=new THREE.BufferGeometry().setFromPoints(pts.map(p=>new THREE.Vector3(...p)));const m=dashed?new THREE.LineDashedMaterial({color:c,dashSize:0.3,gapSize:0.2}):new THREE.LineBasicMaterial({color:c});const l=new THREE.Line(g,m);if(dashed)l.computeLineDistances();return l}
+function arrow(dir,len,c){return new THREE.ArrowHelper(new THREE.Vector3(...dir).normalize(),new THREE.Vector3(0,0,0),len,c,0.6,0.3)}
+function label(text,c){const cv=document.createElement('canvas');cv.width=512;cv.height=64;const x=cv.getContext('2d');x.font='bold 30px system-ui,sans-serif';x.fillStyle=c;x.fillText(text,4,40);const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),depthTest:false,transparent:true}));s.scale.set(5.6,0.7,1);s.center.set(0,0.5);return s}
+// rotor group: geometry in rotor coordinates (Xr,Yr,Zr). SCHEMATIC shapes.
+const rotor=new THREE.Group();rotor.matrixAutoUpdate=false;scene.add(rotor);
+const bus=new THREE.Mesh(new THREE.CylinderGeometry(0.9,0.9,0.7,24),mat(0x8a95a8));bus.rotation.x=Math.PI/2;rotor.add(bus);
+const hga=new THREE.Mesh(new THREE.ConeGeometry(1.6,1.1,18,1,true),mat(0xd8d2c0,{side:THREE.DoubleSide}));hga.rotation.x=Math.PI/2;hga.position.z=-1.0;rotor.add(hga); // opens toward -Z
+const tower=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,1.6,8),mat(0xbbbbbb));tower.rotation.x=Math.PI/2;tower.position.z=-1.3;rotor.add(tower);
+const lga1=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.14,0.3,12),mat(0xffffff));lga1.rotation.x=Math.PI/2;lga1.position.z=-2.2;rotor.add(lga1);
+rotor.add(line([[0,0,0],[0,3,0]],0xcfd6e0));rotor.add(line([[0,3,0],[0,11,0]],0x9fb2cc));
+const magS=[7,11].map(y=>{const m=new THREE.Mesh(new THREE.SphereGeometry(0.18,10,8),mat(0x5fd0ff));m.position.set(0,y,0);rotor.add(m);return m});
+const thr=[[2.2,0,0],[-2.2,0,0]].map(p=>{const b=line([[0,0,0],p],0x999999,true);rotor.add(b);const m=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.3,0.3),mat(0xa0a0a0));m.position.set(...p);rotor.add(m);return m});
+const rAx=[[1,0,0,0xff6666,'+Xr'],[0,1,0,0x66dd66,'+Yr'],[0,0,1,0x6699ff,'+Zr (spin axis)']].map(([x,y,z,c,t])=>{const a=arrow([x,y,z],z?3.2:2.0,c);rotor.add(a);const l=label(t,'#'+c.toString(16).padStart(6,'0'));l.position.set(x*(z?3.4:2.2),y*(z?3.4:2.2),z*3.4);rotor.add(l);return a});
+const lgaLbl=label('LGA-1 / HGA side (−Zr)','#dddddd');lgaLbl.position.set(0.3,0,-2.6);rotor.add(lgaLbl);
+const magLbl=label('MAG boom 11 m (+Yr)','#9fd8ff');magLbl.position.set(0,11.2,0.3);rotor.add(magLbl);
+// stator: drawn on +Z side with NO rotation about Z (its clock angle is not in these data)
+const stator=new THREE.Group();stator.matrixAutoUpdate=false;scene.add(stator);
+const st=new THREE.Mesh(new THREE.CylinderGeometry(0.65,0.65,0.8,20),mat(0x6d7280,{transparent:true,opacity:0.8}));st.rotation.x=Math.PI/2;st.position.z=0.85;stator.add(st);
+const eng=new THREE.Mesh(new THREE.ConeGeometry(0.25,0.5,14),mat(0x777777));eng.rotation.x=-Math.PI/2;eng.position.z=1.55;stator.add(eng);
+const plume=new THREE.Mesh(new THREE.ConeGeometry(0.5,1,16,1,true),new THREE.MeshBasicMaterial({color:0xff7a30,transparent:true,opacity:0.7,side:THREE.DoubleSide}));plume.visible=false;stator.add(plume);
+const ring=new THREE.Mesh(new THREE.TorusGeometry(0.55,0.05,8,32),new THREE.MeshBasicMaterial({color:0xff7a30}));ring.position.z=1.9;ring.visible=false;stator.add(ring);
+const unkLbl=label('burn: duration/force unknown','#ff9a60');unkLbl.position.set(0.7,0,2.1);unkLbl.visible=false;stator.add(unkLbl);
+// inertial direction arrows (EME50)
+const jArr=arrow([1,0,0],7,0xf0a060),sArr=arrow(A.sun,7,0xf2d45c),pArr=arrow(A.pole,5,0xaaaaaa);scene.add(jArr,sArr,pArr);
+const jL=label('Jupiter','#f0a060'),sL=label('Sun','#f2d45c'),pL=label('Jupiter spin pole','#aaaaaa');scene.add(jL,sL,pL);
+const sv=new THREE.Vector3(...A.sun).multiplyScalar(7.4);sL.position.copy(sv);pL.position.copy(new THREE.Vector3(...A.pole).multiplyScalar(5.3));
+const eme=new THREE.Group();[[1,0,0,'X EME50'],[0,1,0,'Y EME50'],[0,0,1,'Z EME50']].forEach(([x,y,z,t])=>{eme.add(line([[0,0,0],[x*4,y*4,z*4]],0x556070,true));const l=label(t,'#7d8899');l.position.set(x*4.2,y*4.2,z*4.2);l.scale.set(2.6,0.33,1);eme.add(l)});scene.add(eme);
+// initial camera
+const z0=nrm(col(rotM(A.ra[0],A.dec[0],0),2));cam.position.set(14+z0[0]*4,-12+z0[1]*4,9);ctrl.update();
+function resize(){const w=view.clientWidth,h=view.clientHeight;renderer.setSize(w,h,false);renderer.domElement.style.width=w+'px';renderer.domElement.style.height=h+'px';cam.aspect=w/h;cam.updateProjectionMatrix()}
+window.addEventListener('resize',resize);resize();
+document.getElementById('legend').innerHTML='<div><i style="background:#6699ff"></i>+Zr spin axis (measured RA, DEC)</div><div><i style="background:#66dd66"></i>+Yr / MAG boom (rotates with measured twist)</div><div><i style="background:#f0a060"></i>Jupiter (−row 1 of EME50_2_SYS3)</div><div><i style="background:#f2d45c"></i>Sun (fit, see frame checks)</div><div style="opacity:.8">Shapes are schematic. Stator clock angle not in data.</div>';
+// ---- state ----
+let idx=0,playing=false,tcur=0;const slider=document.getElementById('slider');slider.max=N-1;
+function idxAt(t){let lo=0,hi=N-1;if(t<A.t[0])return 0;while(lo<hi){const m=(lo+hi+1)>>1;if(A.t[m]<=t)lo=m;else hi=m-1}return lo}
+function setIdx(i){idx=i;const ok=valid(i);const M=rotM(A.ra[i],A.dec[i],A.twist[i]);
+ const m4=new THREE.Matrix4().makeBasis(new THREE.Vector3(...col(M,0)),new THREE.Vector3(...col(M,1)),new THREE.Vector3(...col(M,2)));rotor.matrix.copy(m4);rotor.visible=ok;
+ const Ms=rotM(A.ra[i],A.dec[i],0);stator.matrix.copy(new THREE.Matrix4().makeBasis(new THREE.Vector3(...col(Ms,0)),new THREE.Vector3(...col(Ms,1)),new THREE.Vector3(...col(Ms,2))));
+ const J=A.jup[i];jArr.setDirection(new THREE.Vector3(...J).normalize());jL.position.set(J[0]*7.4,J[1]*7.4,J[2]*7.4);
+ const Z=col(M,2),mZ=Z.map(v=>-v),Y=col(M,1);
+ const rows=[['UTC (ROTATT04 TIME)',A.utc[i],'m'],['Row in window / file','#'+(i+1)+' of '+N+' (ROTATT04.TAB)','m'],['ROTOR RIGHT ASCENSION',A.ra[i]+' rad ('+deg(A.ra[i]).toFixed(3)+'°)','m'],['ROTOR DECLINATION',A.dec[i]+' rad ('+deg(A.dec[i]).toFixed(3)+'°)','m'],['ROTOR TWIST',A.twist[i]+' rad ('+deg(A.twist[i]).toFixed(2)+'°)','m'],['ROTOR SPIN',A.spin[i]+' rad ('+deg(A.spin[i]).toFixed(2)+'°)','m'],
+  ['Angle −Zr to Sun',angd(mZ,A.sun).toFixed(2)+'°','d'],['Angle −Zr to Jupiter',angd(mZ,J).toFixed(2)+'°','d'],['Angle +Yr (MAG boom) to Jupiter',angd(Y,J).toFixed(1)+'°','d'],['Earth direction','not in the local archive (needs NAIF SPK + planetary ephemeris)','n']];
+ document.getElementById('ro').innerHTML=rows.map(r=>'<tr><td>'+r[0]+'</td><td>'+r[1]+' '+(r[2]=='m'?'<span class="tag m">measured</span>':r[2]=='d'?'<span class="tag">computed from measured</span>':'<span class="tag">not available</span>')+'</td></tr>').join('');
+ document.getElementById('tlabel').textContent=A.utc[i]+'  (+'+A.t[i].toFixed(1)+' s)';if(+slider.value!==i)slider.value=i;drawSpin()}
+slider.oninput=()=>{tcur=A.t[+slider.value];setIdx(+slider.value)};
+document.getElementById('play').onclick=e=>{playing=!playing;e.target.textContent=playing?'Pause':'Play'};
+['showJ','showS','showP','showE'].forEach(id=>document.getElementById(id).onchange=vis);function vis(){jArr.visible=jL.visible=showJ.checked;sArr.visible=sL.visible=showS.checked;pArr.visible=pL.visible=showP.checked;eme.visible=showE.checked}vis();
+let last=performance.now();function loop(now){const dt=(now-last)/1000;last=now;if(playing){tcur+=dt*(+document.getElementById('speed').value);if(tcur>A.t[N-1])tcur=0;const i=idxAt(tcur);if(i!==idx)setIdx(i)}
+ const lp=cam.position.clone().normalize();dl.position.copy(lp.multiplyScalar(20));
+ // burn plume pulse
+ if(plume.visible){plume.material.opacity=0.45+0.25*Math.sin(now/90)}
+ ctrl.update();renderer.render(scene,cam);requestAnimationFrame(loop)}requestAnimationFrame(loop);
+// ---- provenance table ----
+const prov=[['Spin-axis direction (+Zr), twist','ROTOR RA, DEC, TWIST from GOMW_5001/GEOMETRY/ROTOR_ATTITUDE/ROTATT04.TAB, matrix formula from ROTATT04.LBL','m'],
+['Jupiter direction','minus row 1 of EME50_2_SYS3 in the same row (row 1 = radial unit vector; checked against S3_LAT, see frame checks)','m'],
+['Sun direction','one fixed vector for the window: rotation EME50→JSE fitted to 402 matched rows, solar latitude from JSE/JSM columns of ORB_04_GLL_JUPCRDS.TAB','d'],
+['Body, HGA, LGA-1, stator, engine shapes','sizes and placement illustrative. −Zr = HGA/LGA-1 boresight side and +Zr = angular momentum direction per GO_SPACECRAFT_DESC_INST.TXT and DESCANSO §2.4','s'],
+['MAG boom along +Yr, 11 m; sensors at 7 m and 11 m','"The magnetometer boom extended outward eleven meters from the centerline and was attached to the science boom" (science boom toward +Yr); sensor at "the midpoint of the boom" drawn at 7 m (midpoint between 3 m and 11 m, my reading)','s'],
+['Two thruster clusters at ±Xr','"twelve 10-N thrusters (six each mounted on separate cantilevered booms)"; boom directions not sourced, drawn on ±Xr arbitrarily','s'],
+['Assumption','ROTATT "rotor coordinates" taken to be the Xr/Yr/Zr system of GO_SPACECRAFT_DESC_INST.TXT; the label does not say so explicitly','n']];
+document.getElementById('prov').innerHTML='<tr><th>Item</th><th>Source</th></tr>'+prov.map(r=>'<tr><td>'+r[0]+' '+(r[2]=='m'?'<span class="tag m">measured</span>':r[2]=='s'?'<span class="tag s">schematic</span>':r[2]=='d'?'<span class="tag">computed</span>':'<span class="tag">assumption</span>')+'</td><td class="hint">'+r[1]+'</td></tr>').join('');
+// ---- frame checks ----
+const R=A.report;const f=(x,n)=>(+x).toFixed(n);
+const fr=[['Row 1 of EME50_2_SYS3 vs trajectory latitude','asin(row1 · pole) − S3_LAT over '+R.n_matched+' matched rows: median '+f(R.lat_from_row1_dot_pole_minus_S3_LAT_deg[0],4)+'°, p95 '+f(R.lat_from_row1_dot_pole_minus_S3_LAT_deg[1],4)+'°, max '+f(R.lat_from_row1_dot_pole_minus_S3_LAT_deg[2],4)+'° (pole = JOVIAN UNIT POLE VECTOR from GP_0001 PROBETRJ.LBL)'],
+['Pole rebuilt from rows 1 and 2','sin(lat)·row1 − cos(lat)·row2 vs PROBETRJ pole: median '+f(R.pole_from_matrix_rows_vs_PROBETRJ_pole_deg['r1*sinlat - r2*coslat'][0],4)+'°, max '+f(R.pole_from_matrix_rows_vs_PROBETRJ_pole_deg['r1*sinlat - r2*coslat'][1],4)+'°. With the opposite sign: '+f(R.pole_from_matrix_rows_vs_PROBETRJ_pole_deg['r1*sinlat + r2*coslat'][0],1)+'°. So row 2 points toward increasing colatitude.'],
+['EME50→JSE rotation (Kabsch fit)','residual between rotated row 1 and unit JSE position: median '+f(R.kabsch_EME50_to_JSE_residual_deg[0],3)+'°, p95 '+f(R.kabsch_EME50_to_JSE_residual_deg[1],3)+'°, max '+f(R.kabsch_EME50_to_JSE_residual_deg[2],3)+'° over 1996-12-15 to 12-20 (JSE treated as fixed over that span). Fitted JSE +Z vs PROBETRJ pole: '+f(R.JSE_Z_in_EME50_vs_PROBETRJ_pole_deg,4)+'°.'],
+['Sun is not exactly +X of JSE','ORB_04_GLL_JUPCRDS.LBL: JSE "X-Z plane contains the Jupiter-Sun vector", Z parallel to the spin axis; JSM X "is along the Jupiter-Sun line". Fitting JSM_X = JSE_X cos β + JSE_Z sin β over all rows gives β = '+f(R.solar_lat_beta_deg,3)+'° (residual median '+f(R.beta_fit_resid_Rj[0],4)+' Rj, max '+f(R.beta_fit_resid_Rj[1],4)+' Rj; fitted (cos β, sin β) norm '+f(R.beta_fit_norm_ab,5)+').'],
+['Sun direction result','EME50 unit vector ('+R.sun_dir_EME50.map(v=>f(v,4)).join(', ')+'), RA '+f(R.sun_RA_DEC_deg[0],2)+'°, Dec '+f(R.sun_RA_DEC_deg[1],2)+'°; '+f(R.sun_dir_angle_from_ecliptic_plane_deg,2)+'° from the B1950 ecliptic plane (obliquity 23.4457889° used only for this check).'],
+['Matrix quality','EME50_2_SYS3 is printed to 5 decimals; orthonormality error up to 1.6e-5 in ROTATT04.']];
+document.getElementById('frames').innerHTML=fr.map(r=>'<tr><td>'+r[0]+'</td><td class="hint">'+r[1]+'</td></tr>').join('');
+// ---- spin plot ----
+const IRC=R.IRC_vs_ROTATT;document.getElementById('spinstats').innerHTML='ROTOR TWIST at the '+IRC.n_exact_time_matches+' timestamps present in both files: median |difference| '+f(IRC.TWIST_exact_match_absdiff_deg[0],3)+'°, max '+f(IRC.TWIST_exact_match_absdiff_deg[1],3)+'°. ROTOR SPIN: median '+f(IRC.SPIN_exact_match_absdiff_deg[0],3)+'°, max '+f(IRC.SPIN_exact_match_absdiff_deg[1],3)+'°. RA/DEC interpolated: max '+f(IRC.RA.max_abs_deg,4)+'° / '+f(IRC.DEC.max_abs_deg,4)+'°. Median twist rate from ROTATT: '+f(IRC.twist_rate_rpm_median,3)+' rpm. The IRC label calls its angles "corrected rotor pointing information", so the two files are probably not independent measurements. Plot: 60 s around the scrubber; dots = ROTATT04 rows, line = ORB04_EUR_IRC.TAB (every 3rd row packed).';
+function drawSpin(){const cv=document.getElementById('spinplot');const dpr=devicePixelRatio||1;const w=cv.clientWidth,h=220;cv.width=w*dpr;cv.height=h*dpr;cv.style.height=h+'px';const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);
+ c.fillStyle=css('--panel');c.fillRect(0,0,w,h);const L=46,Rr=8,T=8,B=28,pw=w-L-Rr,ph=h-T-B;const t0=A.t[idx]-30,t1=A.t[idx]+30;
+ const X=t=>L+(t-t0)/(t1-t0)*pw,Y=v=>T+ph-(v/(2*Math.PI))*ph;c.strokeStyle=css('--grid');c.fillStyle=css('--mut');c.font='11px system-ui';
+ for(let k=0;k<=4;k++){const y=T+ph*k/4;c.beginPath();c.moveTo(L,y);c.lineTo(L+pw,y);c.stroke();c.fillText((360-90*k)+'°',6,y+4)}
+ c.fillText('seconds from '+A.utc[0].slice(11),L,h-8);c.fillText(Math.round(t0)+' … '+Math.round(t1),L+pw-80,h-8);
+ c.strokeStyle=css('--jup');c.lineWidth=1.5;c.beginPath();let pen=false,prev=null;for(let k=0;k<A.irc_t.length;k++){const t=A.irc_t[k];if(t<t0||t>t1){pen=false;continue}const v=A.irc_twist[k];if(pen&&Math.abs(v-prev)>Math.PI)pen=false;pen?c.lineTo(X(t),Y(v)):c.moveTo(X(t),Y(v));pen=true;prev=v}c.stroke();
+ c.fillStyle=css('--rotor');for(let k=0;k<N;k++){const t=A.t[k];if(t<t0||t>t1)continue;c.beginPath();c.arc(X(t),Y(A.twist[k]),2.4,0,7);c.fill()}
+ c.strokeStyle=css('--warn');c.setLineDash([3,3]);c.beginPath();c.moveTo(X(A.t[idx]),T);c.lineTo(X(A.t[idx]),T+ph);c.stroke();c.setLineDash([]);
+ c.fillStyle=css('--ink');c.fillText('ROTOR TWIST: dots ROTATT04, line IRC',L+4,T+12)}
+// ---- comms ----
+const comms=[['quoted','"Though this was not the original plan, LGA-1 has been selected for most of the mission. LGA-2, with its boresight aligned in the opposite direction from the LGA-1 boresight, was only used at specific times when the trajectory geometry required: Venus flyby and Earth-1 flyby"','J. Taylor, K.-M. Cheung, D. Seo, Galileo Telecommunications, DESCANSO Design and Performance Summary Series Article 5, JPL, July 2002, Section 2.4 (TOC p. 10)'],
+['quoted','"The X-band and S-band boresights (direction of maximum gain) are co-aligned in the direction of the LGA-1 boresight, which is the –z axis."','DESCANSO Article 5, Section 2.4'],
+['quoted','"The X-band parts of the RFS were verified operational in short tests in 1991 and 1993."','DESCANSO Article 5, Section 2, footnote 1'],
+['quoted','"Though the spacecraft was designed and built to use both S-band and X-band uplinks and downlinks, Galileo uses only the S-band links."','DESCANSO Article 5, Section 3.1'],
+['quoted','"The S-band antennas operate at a nominal uplink frequency of 2115 MHz and a nominal downlink frequency of 2295 MHz."','DESCANSO Article 5, Section 2.4'],
+['quoted','"The only way to continue communicating was through the use of the Earth-facing LGA-1. And if the then-current configuration (ground and spacecraft) remained unchanged, the telemetry data rate would decrease to 10 bps by JOI. The originally planned X-band HGA downlink data rate was 134.4 kbps."','DESCANSO Article 5, Section 4 (TOC p. 20)'],
+['quoted','"Onboard software changes, coupled with hardware and software changes at Earth-based receiving stations, increased the data rate from Jupiter by as much as 10 times, to 160 bps."','PPI GOMW_5005/EXTRAS/CATALOG_FILES/GO_SPACECRAFT_DESC_INST.TXT (read online)'],
+['quoted','"These X-band capabilities were never used, however, because X-band was only available through the high gain antenna."','GO_SPACECRAFT_DESC_INST.TXT'],
+['quoted','"Phase 2A ... 8 downlink rates from 8 to 160 bps"','GP_0001/CATALOG/MISSION.CAT (local)'],
+['quoted','"The communications subsystem provides two L-band microwave channels, one at 1387.0 MHz and one at 1387.1 MHz, each circularly polarized ... a power amplifier which puts out 23 W of radio frequency power"','GP_0001/CATALOG/GPHOST.CAT (local) — probe-to-orbiter relay link'],
+['quoted','"BX_SC ... in the despun spacecraft coordinate system (roughly anti-Earthward)"','GOMW_5001/DATA/MAG/SATELLITES/EUROPA/ORB04_EUR_IRC.LBL (local), column 3 description'],
+['raw','RFS: LG2, STWT OFF , SMI 0, XTWT OFF , XMI 0, SRNG OFF, XRNG OFF, DOR OFF, TWNC OFF, XSDC OFF;   (first and last status line of each of OTM36/37/38_SEF.TXT, Nov–Dec 1997)','PPI GOUP_0001/DATA/ORBITAL/E11/OTM3x_*_SEF.TXT, read online for this prototype; NOT in the local archive. SEFSIS.PDF §4.2.2.4 defines columns 41-43 as "LG1", "LG2", or "HGA". This disagrees on its face with the DESCANSO statement above; the SIS says status events appear "at the start and end of the SEF, and when some value in a status-event changes". Not resolved here.'],
+['raw','MDS: FMT*AL1, SBIT* 8 ...   (changed from SBIT 32 at 97-314/00:42:27.600; SEFSIS §4.2.2.5: "SBIT" = "S-Band Bit Rate", "*" = changed since last report)','OTM36_MN36AB_SEF.TXT (online). Units are not stated in the SIS field list.'],
+['not downloaded','Per-pass antenna and bit-rate history for the whole mission','No machine-readable history found; SEF/ASRUN files cover launch to orbit E11 only (GOUP_0001, not downloaded)']];
+document.getElementById('comms').innerHTML='<table><tr><th>Kind</th><th>Statement</th><th>Source</th></tr>'+comms.map(r=>'<tr><td><span class="tag">'+r[0]+'</span></td><td>'+r[1]+'</td><td class="hint">'+r[2]+'</td></tr>').join('')+'</table>';
+// ---- burns ----
+let selB=-1;
+function renderBurns(){const ev=BURNS.events;document.getElementById('bjson').value=JSON.stringify(BURNS,null,1);
+ document.getElementById('burns').innerHTML='<tr><th></th><th>Event</th><th>Time (UTC/SCET)</th><th>Engine</th><th>Force</th><th style="min-width:64px">Duration</th><th>Raw parameters</th><th>Source</th></tr>'+ev.map((e,i)=>{const known=e.duration_s!=null&&e.force_N!=null;
+  return'<tr data-i="'+i+'" class="'+(i===selB?'sel':'')+'" style="cursor:pointer"><td><span class="dot'+(known?' f':'')+'" title="'+(known?'duration and force known':'duration or force unknown')+'"></span></td><td>'+e.id+'<br><span class="hint">'+e.type+'</span></td><td>'+(e.time_utc||'unknown')+'<br><span class="hint">'+(e.time_note||'')+'</span></td><td>'+e.engine+'</td><td>'+(e.force_N!=null?e.force_N+' N':'unknown')+(e.force_source?'<br><span class="hint">'+e.force_source+'</span>':'')+'</td><td>'+(e.duration_s!=null?e.duration_s+' s':'unknown')+'</td><td><code>'+(e.parameters_raw||'–')+'</code>'+(e.sef_notes?'<br><span class="hint">'+e.sef_notes.join('<br>')+'</span>':'')+(e.delta_v_m_s!=null?'<br><span class="hint">Δv: '+(e.dv_note||e.delta_v_m_s+' m/s')+'</span>':'')+'</td><td class="hint">'+e.source+'</td></tr>'}).join('');
+ document.querySelectorAll('#burns tr[data-i]').forEach(tr=>tr.onclick=()=>selectBurn(+tr.dataset.i))}
+function selectBurn(i){selB=i;const e=BURNS.events[i];const known=e.duration_s!=null&&e.force_N!=null;
+ const maxI=Math.max(1,...BURNS.events.filter(x=>x.duration_s!=null&&x.force_N!=null).map(x=>x.duration_s*x.force_N));
+ if(known){const I=e.duration_s*e.force_N;const L=5.5*I/maxI;plume.geometry.dispose();plume.geometry=new THREE.ConeGeometry(0.6*I/maxI,L,16,1,true);plume.rotation.x=-Math.PI/2;plume.position.z=1.8+L/2;plume.material.color.setHSL(0.07,1,0.45+0.25*I/maxI);plume.visible=true;ring.visible=false;unkLbl.visible=false}
+ else{plume.visible=false;ring.visible=true;unkLbl.visible=true}
+ document.getElementById('burnsel').innerHTML='<b>'+e.id+'</b>: '+(known?('impulse drawn = '+e.duration_s+' s × '+e.force_N+' N = '+(e.duration_s*e.force_N)+' N·s (plume length is proportional to this, scaled to the largest known impulse in the list).'):('drawn as unknown: '+(e.duration_s==null?'duration ':'')+(e.force_N==null?'force ':'')+'not in the sources read.'))+' The attitude shown on the model is the Europa-4 window, not the attitude at this event; the engine location is schematic.';
+ renderBurns()}
+document.getElementById('bapply').onclick=()=>{try{const j=JSON.parse(document.getElementById('bjson').value);if(!Array.isArray(j.events))throw Error('needs {"events":[...]}');BURNS=j;selB=-1;plume.visible=ring.visible=unkLbl.visible=false;renderBurns();document.getElementById('berr').textContent='applied '+j.events.length+' events'}catch(err){document.getElementById('berr').textContent='JSON error: '+err.message}};
+// burn-window attitude plot (ROTATT11 RA and DEC around OTM-36 and OTM-38)
+function parseT(s){return Date.parse(s.length<=10?s+'T00:00:00Z':s.replace(/Z?$/,'Z'))}
+function drawBW(){const cv=document.getElementById('bwplot');const dpr=devicePixelRatio||1;const w=cv.clientWidth,h=200;cv.width=w*dpr;cv.height=h*dpr;cv.style.height=h+'px';const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.fillStyle=css('--panel');c.fillRect(0,0,w,h);c.font='11px system-ui';
+ const wins=['OTM36','OTM38'];const gw=(w-20)/2;wins.forEach((k,wi)=>{const rows=BW.windows[k];const ox=10+wi*gw,L=ox+40,pw=gw-56,T=18,ph=h-48;if(!rows.length)return;
+  const ts=rows.map(r=>parseT(r[0])),t0=ts[0],t1=ts[ts.length-1];const ra=rows.map(r=>r[1]*180/Math.PI);let lo=Math.min(...ra),hi=Math.max(...ra);const pad=Math.max(0.02,(hi-lo)*0.3);lo-=pad;hi+=pad;
+  const X=t=>L+(t-t0)/(t1-t0)*pw,Y=v=>T+ph-(v-lo)/(hi-lo)*ph;c.strokeStyle=css('--line');c.strokeRect(L,T,pw,ph);c.fillStyle=css('--ink');c.fillText(k+' window: ROTOR RA (°), ROTATT11.TAB',L,12);
+  c.fillStyle=css('--mut');c.fillText(hi.toFixed(3),ox,T+8);c.fillText(lo.toFixed(3),ox,T+ph);c.fillText(rows[0][0].slice(5,16),L,h-14);c.fillText(rows[rows.length-1][0].slice(5,16),L+pw-60,h-14);
+  BURNS.events.filter(e=>e.id.startsWith(k)&&e.time_utc).forEach(e=>{const x=X(parseT(e.time_utc));c.strokeStyle=css('--plume');c.setLineDash([3,3]);c.beginPath();c.moveTo(x,T);c.lineTo(x,T+ph);c.stroke();c.setLineDash([])});
+  c.fillStyle=css('--rotor');rows.forEach((r,j)=>{c.beginPath();c.arc(X(ts[j]),Y(ra[j]),2.6,0,7);c.fill()});
+  let gi=0,gd=0;for(let j=1;j<ts.length;j++){if(ts[j]-ts[j-1]>gd){gd=ts[j]-ts[j-1];gi=j}}c.fillStyle=css('--warn');c.fillText('gap '+rows[gi-1][0].slice(11,16)+'–'+rows[gi][0].slice(11,16),X(ts[gi-1])+4,T+ph-6)});
+ const gtxt=['OTM36','OTM38'].map(k=>{const r=BW.windows[k];const ts=r.map(x=>parseT(x[0]));let gi=1,gd=0;const d=[];for(let j=1;j<ts.length;j++){d.push(ts[j]-ts[j-1]);if(ts[j]-ts[j-1]>gd){gd=ts[j]-ts[j-1];gi=j}}d.sort((a,b)=>a-b);return k+': '+r.length+' rows, median spacing '+(d[d.length>>1]/1000).toFixed(1)+' s, largest gap '+r[gi-1][0]+' to '+r[gi][0]}).join('; ');
+ document.getElementById('bwnote').innerHTML='Dashed lines: SEF 7BURN command times. Dots: every ROTATT11 row in each window. '+gtxt+'. The largest gaps contain the command times. ROTATT11 has no rows on 1997-11-26/27 (OTM-37).'}
+renderBurns();setIdx(0);drawBW();window.addEventListener('resize',()=>{drawSpin();drawBW()});
+window.__att={A,rotM,setIdx,selectBurn,get idx(){return idx},BURNS:()=>BURNS,plume,ring};
+</script>
+</body>
+</html>

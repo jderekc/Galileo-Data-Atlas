@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Probe Descent Prototype</title>
+<style>
+:root{--bg:#f6f5f1;--panel:#ffffff;--ink:#1d1f22;--mut:#5d6168;--line:#d9d7d0;--grid:#ebe9e3;--acc:#2a5db0;
+--asi:#2a5db0;--asi2:#6f95d6;--asi3:#0e2f6b;--nep:#c25a12;--nep2:#e09a5c;--dwe:#1f7a45;--dwe2:#62b386;--dwe3:#0b4426;--nfr:#7a3fa6;--ref:#888;--band:rgba(194,90,18,.16);--evt:#9a2b2b}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15171a;--panel:#1d2024;--ink:#e7e6e1;--mut:#a2a6ad;--line:#33373d;--grid:#2a2e33;--acc:#7aa5ee;
+--asi:#7aa5ee;--asi2:#a9c4f2;--asi3:#4c7fd9;--nep:#f0995a;--nep2:#f6c08f;--dwe:#5cc58a;--dwe2:#9fe0b9;--dwe3:#2f9e62;--nfr:#c394e8;--ref:#999;--band:rgba(240,153,90,.18);--evt:#e57373}}
+:root[data-theme="dark"]{--bg:#15171a;--panel:#1d2024;--ink:#e7e6e1;--mut:#a2a6ad;--line:#33373d;--grid:#2a2e33;--acc:#7aa5ee;
+--asi:#7aa5ee;--asi2:#a9c4f2;--asi3:#4c7fd9;--nep:#f0995a;--nep2:#f6c08f;--dwe:#5cc58a;--dwe2:#9fe0b9;--dwe3:#2f9e62;--nfr:#c394e8;--ref:#999;--band:rgba(240,153,90,.18);--evt:#e57373}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{padding:14px 16px 8px;border-bottom:1px solid var(--line)}
+h1{font-size:18px;margin:0 0 2px;font-weight:650;letter-spacing:.01em}
+.sub{color:var(--mut);font-size:12.5px}
+.wrap{display:grid;grid-template-columns:290px 1fr;gap:12px;padding:12px 16px}
+aside,.card{background:var(--panel);border:1px solid var(--line);border-radius:8px}
+aside{padding:10px 12px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;position:sticky;top:8px}
+aside h2,.card h2{font-size:13px;margin:4px 0 6px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);font-weight:600}
+.grp{margin:8px 0 10px}.grp>b{font-size:13px}
+.lay{display:flex;gap:6px;align-items:flex-start;margin:4px 0;font-size:13px}
+.lay input{margin-top:3px}.lay small{display:block;color:var(--mut);font-size:11.5px}
+.sw{display:inline-block;width:18px;height:3px;margin-right:4px;vertical-align:middle}
+.subcols{margin-left:22px;font-size:12px;color:var(--mut)}.subcols label{margin-right:6px;white-space:nowrap}
+main{display:flex;flex-direction:column;gap:12px;min-width:0}
+.card{padding:10px 12px}
+.ctl{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:13px;margin-bottom:6px}
+select{max-width:100%}
+.ctl label{max-width:100%;min-width:0;display:inline-flex;gap:4px;align-items:center}
+.ctl label select{min-width:0;flex:1 1 auto;width:100%}
+.plots>*,.two>*,.wrap>*{min-width:0}
+td,code,blockquote{overflow-wrap:anywhere}
+select,input[type=number]{font:inherit;font-size:13px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:2px 4px}
+.plots{display:grid;grid-template-columns:1.25fr 1fr;gap:12px}
+canvas{width:100%;display:block;touch-action:none}
+.cv{position:relative}
+.tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,.15);max-width:330px;display:none;z-index:5;white-space:normal}
+.tip b{font-weight:600}.tip code{font-size:11px}
+.hint{font-size:11.5px;color:var(--mut)}
+.hidden-note{font-size:12px;color:var(--mut);margin-top:4px}
+blockquote{margin:6px 0;padding:4px 10px;border-left:3px solid var(--line);font-size:13px}
+blockquote cite{display:block;color:var(--mut);font-size:11.5px;font-style:normal;margin-top:2px}
+table{border-collapse:collapse;font-size:12.5px;width:100%}td,th{border-bottom:1px solid var(--line);padding:3px 6px;text-align:left;vertical-align:top}
+th{color:var(--mut);font-weight:600}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tag{display:inline-block;font-size:11px;border:1px solid var(--line);border-radius:4px;padding:0 4px;color:var(--mut)}
+details summary{cursor:pointer;font-weight:600;font-size:13px}
+@media (max-width:980px){.wrap{grid-template-columns:1fr}aside{order:2}.plots,.two{grid-template-columns:1fr}aside{position:static;max-height:none}}
+</style>
+</head>
+<body>
+<header>
+<h1>Galileo Probe descent, 1995-12-07 (prototype)</h1>
+<div class="sub">Plotted values come straight from the GP_0001 PDS tables named on each layer. Each instrument stays on its own documented time base; ASI, NEP and NFR times (seconds from minor frame 0) are shifted to time from entry only by the TIMES.TXT offset of <span id="mf0"></span> s. No clocks are fitted and nothing is interpolated between instruments.</div>
+</header>
+<div class="wrap">
+<aside id="side">
+<h2>Layers by instrument</h2>
+<div id="layers"></div>
+<div class="hint">Swatch = colour; line style differs per file. Hover any point for its source row.</div>
+</aside>
+<main>
+<div class="plots">
+<section class="card">
+<h2>Time series</h2>
+<div class="ctl"><label>Quantity <select id="tq"></select></label><span class="hint">x = seconds from entry (1995-12-07 22:04:43.752 UT). Drag to zoom, double-click to reset.</span></div>
+<div class="cv"><canvas id="ct" height="420"></canvas><div class="tip" id="tipt"></div></div>
+<div class="hidden-note" id="tnote"></div>
+</section>
+<section class="card">
+<h2>Vertical profile</h2>
+<div class="ctl"><label>Quantity <select id="pq"></select></label><label>Vertical axis <select id="py"><option value="p">Pressure (bar, log)</option><option value="alt">Altitude above 1-bar level (km)</option></select></label></div>
+<div class="cv"><canvas id="cp" height="420"></canvas><div class="tip" id="tipp"></div></div>
+<div class="hidden-note" id="pnote"></div>
+</section>
+</div>
+<section class="card">
+<h2>Data-defined intervals</h2>
+<div class="hint" style="margin-bottom:6px">Intervals are computed in the page from a single file and a threshold you set. The threshold has no physical meaning; it is a viewer setting. No names are assigned to the intervals.</div>
+<div class="ctl">
+<label><input type="checkbox" id="bandOn" checked> Shade pressures where</label>
+<select id="bandFile"></select><select id="bandCol"></select>
+<label>&ge; <input type="number" id="bandThr" step="any" value="0.001" style="width:90px"></label><span class="hint">m<sup>-1</sup> sr<sup>-1</sup> (default 1.0e-3, arbitrary)</span>
+<label><input type="number" id="bandMin" value="2" min="1" style="width:46px"> consecutive rows minimum</label>
+</div>
+<div id="bandList" class="hint"></div>
+<div class="ctl" style="margin-top:6px"><label><input type="checkbox" id="tminOn" checked> Mark the minimum of ASI UPPERATM temperature</label><span id="tminTxt" class="hint"></span></div>
+<div class="ctl"><label><input type="checkbox" id="refOn" checked> Reference line: altitude 0 km / 1 bar</label><span class="hint">Every ALTITUDE column in these labels is defined as "above 1-bar level".</span></div>
+</section>
+<div class="two">
+<section class="card">
+<h2>Events (documented)</h2>
+<table id="evt"><tr><th>Seconds from entry</th><th>Event</th><th>Source</th></tr></table>
+<h2 style="margin-top:12px">Quoted source text</h2>
+<div id="quotes"></div>
+</section>
+<section class="card">
+<h2>Single-value results</h2>
+<div id="had"></div>
+<h2 style="margin-top:12px">Not yet plotted</h2>
+<table id="notyet"><tr><th>File(s)</th><th>Contents per label</th><th>Why not</th></tr></table>
+<h2 style="margin-top:12px">Caveats seen in the data</h2>
+<ul id="caveats" style="margin:4px 0 0 18px;padding:0;font-size:13px"></ul>
+</section>
+</div>
+</main>
+</div>
+<script id="pack" type="application/json">__PACK__</script>
+<script>
+const P=JSON.parse(document.getElementById('pack').textContent);const T=P.tables;const MF0=+P.meta.mf0_after_entry.toFixed(3);const LOCK=+P.meta.lock_after_entry.toFixed(3);
+document.getElementById('mf0').textContent=MF0.toFixed(3);
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+// ---- quantities ----
+const Q={alt:{n:'Altitude above 1-bar level',u:'km',log:false},p:{n:'Pressure',u:'bar',log:true},T:{n:'Temperature',u:'K',log:false},rho:{n:'Density',u:'kg/m³',log:true},
+mu:{n:'Mean molecular weight',u:'amu',log:false},gamma:{n:'Ratio of specific heats (cp/cv)',u:'–',log:false},vrel:{n:'Probe velocity rel. to rotating atmosphere',u:'km/s',log:false},
+vz:{n:'Descent velocity dz/dt (DESCENT, adiabat-derived)',u:'m/s',log:false},vrad:{n:'Radial velocity of probe (ASI2REF)',u:'m/s',log:false},g:{n:'Gravitational acceleration',u:'m/s²',log:false},
+dTdz:{n:'Temperature gradient dT/dz (DESCENT)',u:'K/km',log:false},wind:{n:'Wind (DWE)',u:'m/s',log:false},fres:{n:'DWE frequency residual after wind retrieval',u:'Hz',log:false},
+flux:{n:'NFR temperature-corrected net flux',u:'W/m²',log:false},xsec:{n:'NEP scattering cross section',u:'m⁻¹ sr⁻¹',log:false},scat:{n:'NEP scatter (counts)',u:'counts',log:false}};
+// ---- layers: tb = time base of the file's time column ----
+const XS=['11','12','21','22','31','32','41','42','51','52','61','62'];
+const L=[
+{id:'asi_up',inst:'ASI',tab:'UPPERATM',name:'Upper atmosphere (entry phase)',col:'--asi',dash:[],tb:'MF0',t:0,q:{alt:1,p:[2,1e-3],T:3,rho:4,mu:5,gamma:6,vrel:8},on:true,
+ tbnote:'TIME = "Time from minor frame 0" (UPPERATM.LBL). Pressure converted mbar → bar (÷1000) for the shared axis.'},
+{id:'asi_low',inst:'ASI',tab:'LOWERATM',name:'Lower atmosphere (descent)',col:'--asi3',dash:[6,3],tb:'MF0?',t:0,q:{p:1,T:2,rho:3,alt:4,g:5},on:true,
+ tbnote:'LOWERATM.LBL gives TIME in SECONDS with no description of its zero point; drawn as time from minor frame 0 like the other ASI tables (not documented).'},
+{id:'asi_desc',inst:'ASI',tab:'DESCENT',name:'Descent profile (adiabat-derived)',col:'--asi2',dash:[2,3],tb:'MF0',t:0,q:{alt:1,p:2,T:3,rho:4,g:5,vz:6,dTdz:7},on:false,
+ tbnote:'DESCENT.LBL: "These profiles are not a list of measured points, but is derived using the dry adiabat which fits the data". Temperature is rounded to the nearest degree.'},
+{id:'asi_2ref',inst:'ASI',tab:'ASI2REF',name:'ASI trajectory support file (in DWE directory)',col:'--asi2',dash:[1,2],tb:'MF0',t:0,q:{alt:2,vrad:3},on:false,tbnote:'TIME FROM MINOR FRAME ZERO (ASI2REF.LBL).'},
+{id:'nep_ptz',inst:'NEP',tab:'PTZ',name:'NEP descent P, T, altitude',col:'--nep',dash:[],tb:'MF0',t:1,q:{p:2,T:[3,'C2K'],alt:4},on:true,
+ tbnote:'TIME: UNIT = N/A, DESCRIPTION = "Time from minor frame 0" (PTZ.LBL). Temperature converted °C → K (+273.15).'},
+{id:'nep_xs',inst:'NEP',tab:'XSEC12',name:'NEP cross sections',col:'--nep',dash:[],tb:null,variant:true,q:{xsec:[1,2,3,4,5]},cols:[1],on:true,tbnote:'Indexed by pressure only; no time or altitude column in the file.'},
+{id:'nep_sc',inst:'NEP',tab:'SCATTER',name:'NEP scatter counts',col:'--nep2',dash:[4,2],tb:null,q:{scat:[1,2,3,4,5]},cols:[1],on:false,tbnote:'Indexed by pressure only; no time or altitude column in the file.'},
+{id:'dwe_wind',inst:'DWE',tab:'WIND',name:'Doppler wind, T, P',col:'--dwe',dash:[],tb:'entry',t:0,q:{T:2,p:3,wind:4},altFrom:['RESID',2],on:true,
+ tbnote:'TIME FROM ENTRY (WIND.LBL). On the altitude axis, altitude is taken from RESID.TAB of the same row (time columns of the two files are identical, max difference 0.000 s).'},
+{id:'dwe_resid',inst:'DWE',tab:'RESID',name:'Residual file (altitude, P, residual)',col:'--dwe3',dash:[5,3],tb:'entry',t:0,q:{alt:2,p:3,fres:4},on:false,tbnote:'TIME FROM ENTRY (RESID.LBL).'},
+{id:'dwe_trj',inst:'DWE',tab:'PROBETRJ',name:'Probe trajectory (altitude)',col:'--dwe2',dash:[3,3],tb:'entry',t:0,q:{alt:1},on:true,tbnote:'TIME = seconds since entry (PROBETRJ.LBL). Only time and altitude packed.'},
+{id:'nfr',inst:'NFR',tab:'TCNF',name:'NFR net flux, channels A–F',col:'--nfr',dash:[],tb:'MF0',t:2,q:{flux:[3,4,5,6,7,8]},cols:[3,4,5,6,7,8],on:true,tbnote:'TIME = "Time after minor frame zero, seconds" (TCNF.TAB attached label). Channel band definitions not read.'}
+];
+const INST={ASI:'Atmospheric Structure Instrument (ASI)',NEP:'Nephelometer (NEP)',DWE:'Doppler Wind Experiment (DWE)',NFR:'Net Flux Radiometer (NFR)'};
+// ---- sidebar ----
+const lay=document.getElementById('layers');
+for(const g of Object.keys(INST)){const d=document.createElement('div');d.className='grp';d.innerHTML='<b>'+INST[g]+'</b>';
+ for(const l of L.filter(x=>x.inst==g)){const r=document.createElement('div');r.className='lay';
+  const fileTxt=l.variant?'<select data-v="'+l.id+'">'+XS.map(k=>'<option'+(('XSEC'+k)==l.tab?' selected':'')+'>XSEC'+k+'</option>').join('')+'</select>.TAB':T[l.tab].file.split('/').pop();
+  r.innerHTML='<input type="checkbox" id="cb_'+l.id+'" '+(l.on?'checked':'')+'><div><span class="sw" style="background:var('+l.col+');'+(l.dash.length?'background:repeating-linear-gradient(90deg,var('+l.col+') 0 4px,transparent 4px 7px)':'')+'"></span>'+l.name+'<small>'+fileTxt+' · '+(l.tb?('time base: '+l.tb):'pressure-indexed')+'</small></div>';
+  d.appendChild(r);
+  const k=Object.keys(l.q)[0];
+  if(l.cols){const s=document.createElement('div');s.className='subcols';
+   s.innerHTML=l.cols.length?Object.values(l.q)[0].map(c=>'<label><input type="checkbox" data-l="'+l.id+'" data-c="'+c+'" '+(l.cols.includes(c)?'checked':'')+'>'+shortCol(l,c)+'</label>').join(''):'';d.appendChild(s)}
+ }
+ lay.appendChild(d)}
+function shortCol(l,c){const n=T[l.tab].columns[c].name;return n.replace(' CROSS SECTION','°').replace(' DEGREES','°').replace('_TCNF','')}
+lay.addEventListener('change',e=>{const t=e.target;
+ if(t.dataset.v){const l=L.find(x=>x.id==t.dataset.v);l.tab=t.value;draw();return}
+ if(t.dataset.l){const l=L.find(x=>x.id==t.dataset.l);const c=+t.dataset.c;l.cols=t.checked?[...new Set([...l.cols,c])]:l.cols.filter(x=>x!=c);draw();return}
+ if(t.id.startsWith('cb_')){L.find(x=>'cb_'+x.id==t.id).on=t.checked;draw()}});
+// ---- quantity selectors ----
+const tqSel=document.getElementById('tq'),pqSel=document.getElementById('pq'),pySel=document.getElementById('py');
+const tQ=['alt','p','T','rho','wind','vz','vrad','vrel','mu','gamma','g','dTdz','flux','fres'],pQ=['T','rho','wind','mu','gamma','vz','dTdz','xsec','scat','alt','p','g'];
+for(const k of tQ)tqSel.add(new Option(Q[k].n+' ['+Q[k].u+']',k));for(const k of pQ)pqSel.add(new Option(Q[k].n+' ['+Q[k].u+']',k));
+tqSel.value='alt';pqSel.value='T';
+[tqSel,pqSel,pySel].forEach(s=>s.onchange=()=>{zoom.t=null;zoom.p=null;draw()});
+// ---- value access ----
+function colv(tab,ci,tr){const a=T[tab].data[ci];if(!tr)return a;return a.map(v=>v==null?null:(tr==='C2K'?v+273.15:v*tr))}
+function qcols(l,k){const s=l.q[k];if(s==null)return[];if(Array.isArray(s)&&typeof s[1]!=='number'&&typeof s[1]!=='string')return s.filter(c=>l.cols.includes(c)).map(c=>[c,null]);
+ if(Array.isArray(s)&&s.length>2)return s.filter(c=>l.cols.includes(c)).map(c=>[c,null]);if(Array.isArray(s))return[[s[0],s[1]]];return[[s,null]]}
+function tEntry(l){const a=T[l.tab].data[l.t];return l.tb==='entry'?a:a.map(v=>v==null?null:v+MF0)}
+function shade(base,i,n){if(n<=1)return css(base);const c=css(base);return c} // same hue, dash differs
+const SUBDASH=[[],[6,3],[2,2],[8,2,2,2],[1,3],[10,4]];
+function seriesFor(panel){const out=[],hidden=[];const k=panel==='t'?tqSel.value:pqSel.value;const ya=pySel.value;
+ for(const l of L){if(!l.on)continue;const cs=qcols(l,k);if(!cs.length)continue;
+  if(panel==='t'&&l.t==null){hidden.push(l.name+' (no time column)');continue}
+  let Y=null;if(panel==='p'){if(ya==='p'){if(l.q.p!=null){const pc=Array.isArray(l.q.p)?l.q.p:[l.q.p,null];Y={a:colv(l.tab,pc[0],pc[1]),src:T[l.tab].columns[pc[0]].name}}else if(l.tb==null){Y={a:colv(l.tab,0),src:T[l.tab].columns[0].name}}}
+   else{if(l.q.alt!=null)Y={a:colv(l.tab,l.q.alt),src:T[l.tab].columns[l.q.alt].name};else if(l.altFrom){Y={a:colv(l.altFrom[0],l.altFrom[1]),src:'ALTITUDE ABOVE 1 BAR from '+l.altFrom[0]+'.TAB (same row)'}}}
+   if(!Y){hidden.push(l.name+' (no '+(ya==='p'?'pressure':'altitude')+' column in '+l.tab+'.TAB)');continue}}
+  cs.forEach(([ci,tr],j)=>{const V=colv(l.tab,ci,tr);const X=panel==='t'?tEntry(l):V;const YY=panel==='t'?V:Y.a;const pts=[];
+   for(let i=0;i<V.length;i++){if(X[i]==null||YY[i]==null)continue;pts.push([X[i],YY[i],i])}
+   out.push({l,ci,tr,pts,col:css(l.col),dash:cs.length>1?SUBDASH[j%6]:l.dash,label:l.name+(cs.length>1?' · '+shortCol(l,ci):''),ysrc:Y&&Y.src})})}
+ return{out,hidden,k,ya}}
+// ---- plotting ----
+const zoom={t:null,p:null};
+function nice(a,b,n){const s=(b-a)/n,m=Math.pow(10,Math.floor(Math.log10(s))),f=s/m,st=(f<1.5?1:f<3?2:f<7?5:10)*m;const r=[];for(let v=Math.ceil(a/st)*st;v<=b+st*1e-9;v+=st)r.push(+v.toPrecision(12));return r}
+function logTicks(a,b){const r=[];for(let e=Math.floor(a);e<=Math.ceil(b);e++)r.push(e);return r.filter(e=>e>=a-1e-9&&e<=b+1e-9)}
+function fmt(v){if(v==null)return'–';const a=Math.abs(v);if(a!==0&&(a<1e-3||a>=1e5))return v.toExponential(3);return +v.toPrecision(6)+''}
+function setup(cv){const dpr=window.devicePixelRatio||1;const w=cv.clientWidth,h=Math.max(300,Math.min(460,Math.round(w*0.68)));cv.style.height=h+'px';cv.width=w*dpr;cv.height=h*dpr;const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);return{c,w,h}}
+function render(cv,opt){const{c,w,h}=setup(cv);const M={l:62,r:12,t:12,b:40};const pw=w-M.l-M.r,ph=h-M.t-M.b;
+ const xs=opt.xlog?v=>Math.log10(v):v=>v, ys=opt.ylog?v=>Math.log10(v):v=>v;
+ let[x0,x1]=opt.xr,[y0,y1]=opt.yr;const X=v=>M.l+(xs(v)-x0)/(x1-x0)*pw;const Y=v=>opt.yinv?M.t+(ys(v)-y0)/(y1-y0)*ph:M.t+ph-(ys(v)-y0)/(y1-y0)*ph;
+ c.fillStyle=css('--panel');c.fillRect(0,0,w,h);c.font='11px system-ui,sans-serif';c.strokeStyle=css('--grid');c.fillStyle=css('--mut');c.lineWidth=1;
+ const xt=opt.xlog?logTicks(x0,x1):nice(x0,x1,Math.max(3,Math.floor(pw/90)));const yt=opt.ylog?logTicks(y0,y1):nice(y0,y1,Math.max(3,Math.floor(ph/50)));
+ c.textAlign='center';for(const t of xt){const px=M.l+(t-x0)/(x1-x0)*pw;c.beginPath();c.moveTo(px,M.t);c.lineTo(px,M.t+ph);c.stroke();c.fillText(opt.xlog?('1e'+t):fmt(t),px,M.t+ph+14)}
+ c.textAlign='right';for(const t of yt){const py=opt.yinv?M.t+(t-y0)/(y1-y0)*ph:M.t+ph-(t-y0)/(y1-y0)*ph;c.beginPath();c.moveTo(M.l,py);c.lineTo(M.l+pw,py);c.stroke();c.fillText(opt.ylog?(t===0?'1':('1e'+t)):fmt(t),M.l-5,py+4)}
+ c.textAlign='center';c.fillStyle=css('--ink');c.fillText(opt.xl,M.l+pw/2,h-6);c.save();c.translate(13,M.t+ph/2);c.rotate(-Math.PI/2);c.fillText(opt.yl,0,0);c.restore();
+ c.save();c.beginPath();c.rect(M.l,M.t,pw,ph);c.clip();
+ for(const b of opt.bands||[]){c.fillStyle=css('--band');if(b.axis==='y'){const a=Y(b.a),bb=Y(b.b);c.fillRect(M.l,Math.min(a,bb),pw,Math.abs(bb-a)||1)}else{const a=X(b.a),bb=X(b.b);c.fillRect(Math.min(a,bb),M.t,Math.max(1,Math.abs(bb-a)),ph)}}
+ for(const v of opt.vlines||[]){const px=X(v.x);c.strokeStyle=v.col||css('--evt');c.setLineDash(v.dash||[4,3]);c.beginPath();c.moveTo(px,M.t);c.lineTo(px,M.t+ph);c.stroke();c.setLineDash([]);c.fillStyle=v.col||css('--evt');c.textAlign='left';c.fillText(v.t,px+3,M.t+11+(v.row||0)*12)}
+ for(const v of opt.hlines||[]){if(opt.ylog&&v.y<=0)continue;const py=Y(v.y);c.strokeStyle=css('--ref');c.setLineDash([2,4]);c.beginPath();c.moveTo(M.l,py);c.lineTo(M.l+pw,py);c.stroke();c.setLineDash([]);c.fillStyle=css('--ref');c.textAlign='right';c.fillText(v.t,M.l+pw-4,py-3)}
+ const hit=[];
+ for(const s of opt.series){c.strokeStyle=s.col;c.fillStyle=s.col;c.lineWidth=1.6;c.setLineDash(s.dash);c.beginPath();let pen=false,prev=null;
+  for(const p of s.pts){if((opt.xlog&&p[0]<=0)||(opt.ylog&&p[1]<=0)){pen=false;continue}const px=X(p[0]),py=Y(p[1]);
+   if(pen&&prev!=null&&s.gap&&Math.abs(p[opt.gapAxis||0]-prev)>s.gap)pen=false;
+   if(!pen){c.moveTo(px,py);pen=true}else c.lineTo(px,py);prev=p[opt.gapAxis||0];hit.push([px,py,s,p])}
+  c.stroke();c.setLineDash([]);if(s.pts.length<80)for(const p of s.pts){if((opt.xlog&&p[0]<=0)||(opt.ylog&&p[1]<=0))continue;c.beginPath();c.arc(X(p[0]),Y(p[1]),2.2,0,7);c.fill()}}
+ for(const m of opt.marks||[]){const px=X(m.x),py=Y(m.y);c.strokeStyle=css('--ink');c.lineWidth=1.5;c.beginPath();c.arc(px,py,6,0,7);c.stroke();c.fillStyle=css('--ink');c.textAlign='left';c.fillText(m.t,px+8,py-6)}
+ c.restore();c.strokeStyle=css('--line');c.strokeRect(M.l,M.t,pw,ph);
+ cv._map={M,pw,ph,x0,x1,y0,y1,opt,hit}}
+function ext(series,ax,log){let a=Infinity,b=-Infinity;for(const s of series)for(const p of s.pts){const v=p[ax];if(log&&v<=0)continue;const u=log?Math.log10(v):v;if(u<a)a=u;if(u>b)b=u}
+ if(!isFinite(a)){a=0;b=1}if(a===b){a-=1;b+=1}const pad=(b-a)*0.04;return log?[Math.floor(a*10)/10,Math.ceil(b*10)/10]:[a-pad,b+pad]}
+// ---- bands ----
+const bf=document.getElementById('bandFile'),bc=document.getElementById('bandCol');XS.forEach(k=>bf.add(new Option('XSEC'+k+'.TAB','XSEC'+k)));bf.value='XSEC12';
+function fillBC(){const v=bc.value;bc.innerHTML='';T[bf.value].columns.slice(1).forEach((c,i)=>bc.add(new Option(c.name,i+1)));bc.value=v||1}fillBC();
+bf.onchange=()=>{fillBC();draw()};['bandCol','bandThr','bandMin','bandOn','tminOn','refOn'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
+function bands(){if(!document.getElementById('bandOn').checked)return{b:[],txt:''};const tab=bf.value,ci=+bc.value,thr=+document.getElementById('bandThr').value,mn=Math.max(1,+document.getElementById('bandMin').value||1);
+ const p=T[tab].data[0],v=T[tab].data[ci];const out=[];let s=-1;
+ for(let i=0;i<=p.length;i++){const ok=i<p.length&&v[i]!=null&&v[i]>=thr;if(ok&&s<0)s=i;if(!ok&&s>=0){if(i-s>=mn)out.push({axis:'y',a:p[s],b:p[i-1],r:[s,i-1]});s=-1}}
+ const txt=out.length?('<b>'+out.length+' interval(s)</b> in '+tab+'.TAB, column "'+T[tab].columns[ci].name+'" ≥ '+thr+' for ≥ '+mn+' consecutive rows: '+out.map(o=>fmt(o.a)+'–'+fmt(o.b)+' bar (rows '+(o.r[0]+1)+'–'+(o.r[1]+1)+')').join('; ')+'. Shaded on the profile panel when the vertical axis is pressure.'):'No rows meet the threshold.';
+ return{b:out,txt}}
+const U=T.UPPERATM.data;let im=0;U[3].forEach((v,i)=>{if(v<U[3][im])im=i});
+document.getElementById('tminTxt').textContent='UPPERATM.TAB row '+(im+1)+': T = '+U[3][im]+' K at '+U[2][im]+' mbar, altitude '+U[1][im]+' km, time '+U[0][im]+' s from MF0 ('+fmt(U[0][im]+MF0)+' s from entry).';
+// ---- draw ----
+function draw(){
+ const B=bands();document.getElementById('bandList').innerHTML=B.txt;
+ const refOn=document.getElementById('refOn').checked,tmin=document.getElementById('tminOn').checked;
+ // time panel
+ const st=seriesFor('t');const k=st.k;const cvt=document.getElementById('ct');
+ const xr=zoom.t?zoom.t.x:ext(st.out,0,false),yr=zoom.t?zoom.t.y:ext(st.out,1,Q[k].log);
+ const vl=[{x:0,t:'entry',row:0},{x:MF0,t:'MF0 '+MF0,row:1},{x:LOCK,t:'link lock '+LOCK,row:2}];
+ const tb=[{axis:'x',a:166,b:167.106}];
+ render(cvt,{series:st.out,xr,yr,ylog:Q[k].log,xl:'seconds from entry',yl:Q[k].n+' ['+Q[k].u+']',vlines:vl,bands:tb,hlines:refOn&&k==='alt'?[{y:0,t:'0 km (1-bar level)'}]:refOn&&k==='p'?[{y:1,t:'1 bar'}]:[],
+  marks:tmin&&(k==='T')&&L[0].on?[{x:U[0][im]+MF0,y:U[3][im],t:'UPPERATM T min'}]:[]});
+ document.getElementById('tnote').innerHTML=(st.hidden.length?'Not drawn here: '+st.hidden.join('; ')+'. ':'')+'Shaded strip at 166–167.106 s: interval between the PROBETRJ state vectors where the label says the second aerodynamic table was extracted (see quotes).';
+ // profile panel
+ const sp=seriesFor('p');const pk=sp.k,ya=sp.ya;const cvp=document.getElementById('cp');
+ const pxr=zoom.p?zoom.p.x:ext(sp.out,0,Q[pk].log),pyr=zoom.p?zoom.p.y:ext(sp.out,1,ya==='p');
+ render(cvp,{series:sp.out,xr:pxr,yr:pyr,xlog:Q[pk].log,ylog:ya==='p',yinv:ya==='p',xl:Q[pk].n+' ['+Q[pk].u+']',yl:ya==='p'?'pressure [bar] (log, increasing downward)':'altitude above 1-bar level [km]',
+  bands:ya==='p'?B.b:[],hlines:refOn?(ya==='p'?[{y:1,t:'1 bar'}]:[{y:0,t:'0 km'}]):[],
+  marks:tmin&&pk==='T'&&L[0].on?[{x:U[3][im],y:ya==='p'?U[2][im]/1000:U[1][im],t:'UPPERATM T min'}]:[]});
+ document.getElementById('pnote').innerHTML=(sp.hidden.length?'Not drawn on this axis: '+sp.hidden.join('; ')+'.':'')}
+// ---- hover + zoom ----
+function attach(cv,tip,key){let drag=null;
+ const inv=(m,px,py)=>{const{M,pw,ph,x0,x1,y0,y1,opt}=m;let x=x0+(px-M.l)/pw*(x1-x0);let y=opt.yinv?y0+(py-M.t)/ph*(y1-y0):y0+(M.t+ph-py)/ph*(y1-y0);return[x,y]};
+ cv.addEventListener('pointerdown',e=>{const r=cv.getBoundingClientRect();drag=[e.clientX-r.left,e.clientY-r.top];});
+ cv.addEventListener('pointerup',e=>{if(!drag)return;const r=cv.getBoundingClientRect();const p=[e.clientX-r.left,e.clientY-r.top];
+  if(Math.abs(p[0]-drag[0])>8&&Math.abs(p[1]-drag[1])>8){const m=cv._map;const a=inv(m,drag[0],drag[1]),b=inv(m,p[0],p[1]);zoom[key]={x:[Math.min(a[0],b[0]),Math.max(a[0],b[0])],y:[Math.min(a[1],b[1]),Math.max(a[1],b[1])]};draw()}drag=null});
+ cv.addEventListener('dblclick',()=>{zoom[key]=null;draw()});
+ cv.addEventListener('pointermove',e=>{const r=cv.getBoundingClientRect();const x=e.clientX-r.left,y=e.clientY-r.top;const m=cv._map;if(!m)return;let best=null,bd=144;
+  for(const h of m.hit){const d=(h[0]-x)**2+(h[1]-y)**2;if(d<bd){bd=d;best=h}}
+  if(!best){tip.style.display='none';return}const s=best[2],p=best[3],i=p[2],l=s.l,tb=T[l.tab];
+  const row=tb.columns.map((c,ci)=>{const v=tb.data[ci][i];return'<tr><td>'+c.name+'</td><td>'+fmt(v)+(v==null?' (fill)':'')+' '+(c.unit&&c.unit!='N/A'?c.unit:'')+'</td></tr>'}).join('');
+  tip.innerHTML='<b>'+s.label+'</b><br><code>'+tb.file+'</code> row '+(i+1)+'<table>'+row+'</table><div class="hint">'+l.tbnote+(s.ysrc?'<br>Vertical axis: '+s.ysrc:'')+(l.tb&&l.tb.startsWith('MF0')&&key==='t'?'<br>x = TIME + '+MF0+' s (TIMES.TXT)':'')+'</div>';
+  tip.style.display='block';const tw=tip.offsetWidth,th=tip.offsetHeight;tip.style.left=Math.min(Math.max(0,x+14),cv.clientWidth-tw)+'px';tip.style.top=Math.max(0,Math.min(y+14,cv.clientHeight-th))+'px'});
+ cv.addEventListener('pointerleave',()=>tip.style.display='none')}
+attach(document.getElementById('ct'),document.getElementById('tipt'),'t');attach(document.getElementById('cp'),document.getElementById('tipp'),'p');
+// ---- static panels ----
+const ev=[[0,'Entry, 1995-12-07 22:04:43.752 UT (day 341)','GP_0001/DOCUMENT/TIMES.TXT'],[MF0,'MF0 (minor frame 0), 22:07:30.965 UT','TIMES.TXT: "MF0 occurs 167.2129999995232 seconds after entry"'],
+[LOCK,'Link lock, 22:08:30.693 UT','TIMES.TXT: "Link lockup occurs 226.9409999996424 seconds after entry"'],['166 – 167.106','Break in PROBETRJ state-vector list where the second aerodynamic table sits','PROBETRJ.LBL NOTE; DWEDS.CAT (quotes below)']];
+document.getElementById('evt').insertAdjacentHTML('beforeend',ev.map(e=>'<tr><td>'+(typeof e[0]=='number'?e[0].toFixed(3):e[0])+'</td><td>'+e[1]+'</td><td class="hint">'+e[2]+'</td></tr>').join(''));
+const qs=[['The second table of Probe Aerodynamic Characteristics was extracted from between state vectors at 166 and 167.106 seconds.','GP_0001/DATA/DWE/PROBETRJ.LBL, NOTE'],
+['OD126 WITH 53 SEC LATE PARACHUTE','GP_0001/DATA/DWE/PROBETRJ.LBL, NOTE (copied header of original file, STATUS INFO line)'],
+['At the time of parachute deployment the profile is interrupted by a second aerodynamic characteristics table.','GP_0001/CATALOG/DWEDS.CAT'],
+['The PSTF file used (PSTF-OD126_1s) provides the probe descent trajectory in 1 second increments and includes the effect of the late parachute deployment.','GP_0001/CATALOG/DWEDS.CAT'],
+['Nominal conditions at parachute deployment are Mach 0.9 and a dynamic pressure of 6000 N m^-2. ... The pilot parachute is injected into the wake by a mortar fired at a velocity of 30 m/s. ... The deployment process, from initiation through full opening of the main chute, is designed to take less than 2 s.','GP_0001/CATALOG/GPHOST.CAT (design description, not a measurement)'],
+['These profiles are not a list of measured points, but is derived using the dry adiabat which fits the data, as shown and described in SEIFFETAL1998.','GP_0001/DATA/ASI/DESCENT.LBL'],
+['Deviations from the adiabat between 1 and 3 bars, which were initially interpreted as a stable layer in the tenuous cloud above 1.6 bars and an unstable layer below the cloud, now are believed to reflect departures from preflight pressure sensor calibrations resulting from unanticipated variations in the probe\'s internal temperature.','GP_0001/CATALOG/ASIDS.CAT, Data Set Overview, "From [SEIFFETAL1996]" (instrument team statement)']];
+document.getElementById('quotes').innerHTML=qs.map(q=>'<blockquote>“'+q[0]+'”<cite>'+q[1]+'</cite></blockquote>').join('');
+document.getElementById('had').innerHTML='<table><tr><th>HAD.TAB column</th><th>Value</th><th>Std dev</th></tr>'+P.had.map(r=>'<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td></tr>').join('')+'</table><div class="hint">GP_0001/DATA/HAD/HAD.TAB, one row (Helium Abundance Detector). Descriptions from its attached label.</div>';
+const ny=[['NMS/NMSDATA.TAB (+ A*/B*/I1_*/I2_* tables)','GPMS step, time after MF0, pressure (mbar, supplied by ASI), ionizer energy, mass (Da), sensitivity, raw and pile-up-corrected counts per 0.48375 s integration','Needs a per-mass selector and a reading of NMSINFO.TXT; raw counts per step are not one profile'],
+['EPI/CNTRATES, CNTRATEO, COUNTERS, COUNTERO, HOUSKEEP','count rates by sector vs distance (Rj), pre-entry','Pre-entry magnetosphere, not descent; needs own axis'],
+['NFR/FLUXES/TCUF, RAWNF, MCTCNF …; NFR/RAW, ENGNRING','up-flux mode, raw and Monte-Carlo-corrected fluxes; raw counts; instrument temps','Only TCNF plotted; channel wavelength bands not read'],
+['ASI/D04P1-3, D05T1-2, D06*, E03*','raw sensor pressures/temperatures/accelerations','Time column is "seconds after the start of the Descent mode" (ASIINFO.TXT); its offset from MF0 is not given in the files read'],
+['NEP/FITTEMP, TEMPVOLT, SENTEMP1/2, GAIN, CONTAM, RAW…','NEP instrument temperatures, gains, contamination channel, raw hex','Instrument housekeeping'],
+['DWE/RADIO, RSF0117A.ADJ, SDR0530A, FRED, ORBTRTRJ','probe-signal frequency records, residuals before retrieval, orbiter state vectors','Not part of a vertical profile; FRED could be added to the time panel'],
+['LRD/LRDINFO.TXT','description only','No LRD data table in GP_0001/DATA/LRD']];
+document.getElementById('notyet').insertAdjacentHTML('beforeend',ny.map(r=>'<tr><td><code>'+r[0]+'</code></td><td>'+r[1]+'</td><td class="hint">'+r[2]+'</td></tr>').join(''));
+document.getElementById('caveats').innerHTML=P.caveats.map(c=>'<li>'+c+'</li>').join('');
+let rz;window.addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(draw,120)});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',draw);
+draw();window.__probe={L,T,seriesFor,draw,zoom,bands};
+</script>
+</body>
+</html>

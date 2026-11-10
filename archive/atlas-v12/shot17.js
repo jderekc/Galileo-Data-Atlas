@@ -1,0 +1,20 @@
+const { chromium } = require('playwright');
+const base='/tmp/claude-0/-home-claude/59c9c79e-97f6-546e-8abd-eade5ba1a35d/scratchpad/viewer/';
+(async()=>{
+  const b = await chromium.launch({args:['--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist','--use-gl=angle']});
+  const pg=await (await b.newContext({viewport:{width:1400,height:900}})).newPage();const errs=[];
+  pg.on('pageerror',e=>errs.push(e.message));
+  await pg.route('**/*',route=>{const u=route.request().url();
+    if(u.includes('three.min.js')) return route.fulfill({path:base+'npm/node_modules/three/build/three.min.js',contentType:'application/javascript'});
+    if(u.includes('OrbitControls.js')) return route.fulfill({path:base+'npm/node_modules/three/examples/js/controls/OrbitControls.js',contentType:'application/javascript'});
+    if(u.startsWith('file://')||u.startsWith('data:')) return route.continue(); return route.abort();});
+  await pg.goto('file://'+base+'viewer_wrapped.html'); await pg.waitForTimeout(15000);
+  const st=()=>pg.evaluate(()=>({id:__viewer.SG.id,TA:Math.round(__viewer.S.TA),tmin:Math.round(__viewer.SG.tmin),scrub:document.querySelector('#scrub').value,clock:document.querySelector('#clock').textContent,hash:location.hash}));
+  console.log('first load',JSON.stringify(await st()));
+  await pg.evaluate(()=>{__viewer.S.TA=2e6});
+  await pg.click('#segNext');await pg.waitForTimeout(6000);console.log('next',JSON.stringify(await st()));
+  await pg.selectOption('#segSel','ORB20');await pg.waitForTimeout(6000);console.log('select',JSON.stringify(await st()));
+  await pg.click('#mc',{position:{x:300,y:30}});await pg.waitForTimeout(6000);console.log('mission click',JSON.stringify(await st()));
+  await pg.evaluate(async()=>{await __viewer.openFly('G8')});await pg.waitForTimeout(2000);
+  await pg.click('#toJup').catch(()=>{});await pg.waitForTimeout(6000);console.log('flyby->orbit (tca time kept)',JSON.stringify(await st()));
+  console.log('errs',errs.length,errs.slice(0,2));await b.close();})();

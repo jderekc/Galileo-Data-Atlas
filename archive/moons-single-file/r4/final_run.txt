@@ -1,0 +1,38 @@
+LOW scenes 36
+HIGH scenes 36
+ERRORS []
+dist 150 fogW/camAlt/density 0.000 53.5 0.0000
+dist 1000 fogW/camAlt/density 0.000 305.9 0.0000
+dist 30000 fogW/camAlt/density 0.000 13688.2 0.0000
+errs []
+errs []
+errors []
+errs []
+errs []
+IO hi 1024x512 ms 1203 EUROPA hi 1024x512 ms 1239 GANYMEDE hi 1024x512 ms 1095 CALLISTO hi 1024x512 ms 1053 AMALTHEA hi 1024x512 ms 605 JUPITER hi 1024x512 ms 1063 LOW ERRS []
+HIGH ERRS []
+LOW picked {"Io":"FLY:I0","Ganymede":"FLY:G1","Callisto":"FLY:C3","Europa":"FLY:E4","Amalthea":"FLY:A34"}
+LOW PROBE hi wait ms 0 {"left":0,"done":0,"ok":true,"workers":0}
+LOW bodies {"JUPITER":{"tris":3024,"map":"256x128"},"JUPITER.cap":{"tris":18432,"map":"512x512"},"JUPITER.near":{"tris":8192,"map":"512x512"},"IO":{"tris":1520,"map":"256x128"},"EUROPA":{"tris":1520,"map":"256x128"},"GANYMEDE":{"tris":1520,"map":"256x128"},"CALLISTO":{"tris":1520,"map":"256x128"}} crafts {"ORBITER.body":3564,"PROBE.entry":2244,"PROBE.module":228,"PROBE.chute":7704,"PROBE.aft":852,"PROBE.shell":1248}
+LOW entry {"frame":114.2,"tris":31892,"calls":22}
+LOW chute {"frame":116.6,"tris":37580,"calls":23}
+LOW descent {"frame":95.8,"tris":61180,"calls":24}
+LOW Io hi wait 0 {"frame":36,"tris":4546,"b":{"JUPITER":{"tris":3024,"map":"256x128"},"IO":{"tris":1520,"map":"256x128"},"EUROPA":{"tris":1520,"map":"256x128"},"GANYMEDE":{"tris":1520,"map":"256x128"},"CALLISTO":{"tris":1520,"map":"256x128"}}}
+LOW Ganymede hi wait 0 {"frame":38.9,"tris":7590,"b":{"JUPITER":{"tris":3024,"map":"256x128"},"GANYMEDE":{"tris":1520,"map":"256x128"},"IO":{"tris":1520,"map":"256x128"},"EUROPA":{"tris":1520,"map":"256x128"},"CALLISTO":{"tris":1520,"map":"256x128"}}}
+LOW Callisto hi wait 0 {"frame":29.7,"tris":3042,"b":{"JUPITER":{"tris":3024,"map":"256x128"},"CALLISTO":{"tris":1520,"map":"256x128"},"IO":{"tris":1520,"map":"256x128"},"EUROPA":{"tris":1520,"map":"256x128"},"GANYMEDE":{"tris":1520,"map":"256x128"}}}
+LOW Europa hi wait 0 {"frame":28.6,"tris":3044,"b":{"JUPITER":{"tris":3024,"map":"256x128"},"EUROPA":{"tris":1520,"map":"256x128"},"IO":{"tris":1520,"map":"256x128"},"GANYMEDE":{"tris":1520,"map":"256x128"},"CALLISTO":{"tris":1520,"map":"256x128"}}}
+LOW orbiter {"ORBITER.body":3564}
+LOW Amalthea hi wait 0 {"frame":18.9,"tris":1522,"b":{"JUPITER":{"tris":3024,"map":"256x128"},"AMALTHEA":{"tris":1520,"map":"256x128"},"IO":{"tris":1520,"map":"256x128"},"EUROPA":{"tris":1520,"map":"256x128"},"GANYMEDE":{"tris":1520,"map":"256x128"},"CALLISTO":{"tris":1520,"map":"256x128"}}}
+HIGH picked {"Io":"FLY:I0","Ganymede":"FLY:G1","Callisto":"FLY:C3","Europa":"FLY:E4","Amalthea":"FLY:A34"}
+HIGH PROBE hi wait ms 49301 {"left":0,"done":7,"ok":true,"workers":1}
+HIGH bodies {"JUPITER":{"tris":65024,"map":"2048x1024"},"JUPITER.cap":{"tris":131072,"map":"2048x2048"},"JUPITER.near":{"tris":51200,"map":"2048x2048"},"IO":{"tris":36480,"map":"2048x1024"},"EUROPA":{"tris":36480,"map":"2048x1024"},"GANYMEDE":{"tris":36480,"map":"2048x1024"},"CALLISTO":{"tris":36480,"map":"2048x1024"}} crafts {"ORBITER.body":13188,"PROBE.entry":3168,"PROBE.module":900,"PROBE.chute":15360,"PROBE.aft":3600,"PROBE.shell":2736,"PROBE.lines":"504 line segments"}
+HIGH entry {"frame":565.8,"tris":250464,"calls":22}
+HIGH chute {"frame":641.7,"tris":263556,"calls":24}
+HIGH descent {"frame":818.4,"tris":365444,"calls":24}
+HIGH Io hi wait 677 {"frame":254.6,"tris":101506,"b":{"JUPITER":{"tris":65024,"map":"2048x1024"},"IO":{"tris":36480,"map":"2048x1024"},"EUROPA":{"tris":36480,"map":"2048x1024"},"GANYMEDE":{"tris":36480,"map":"2048x1024"},"CALLISTO":{"tris":36480,"map":"2048x1024"}}}
+HIGH Ganymede hi wait 417 {"frame":376.9,"tris":174470,"b":{"JUPITER":{"tris":65024,"map":"2048x1024"},"GANYMEDE":{"tris":36480,"map":"2048x1024"},"IO":{"tris":36480,"map":"2048x1024"},"EUROPA":{"tris":36480,"map":"2048x1024"},"CALLISTO":{"tris":36480,"map":"2048x1024"}}}
+HIGH Callisto hi wait 214 {"frame":233.4,"tris":72962,"b":{"JUPITER":{"tris":65024,"map":"2048x1024"},"CALLISTO":{"tris":36480,"map":"2048x1024"},"IO":{"tris":36480,"map":"2048x1024"},"EUROPA":{"tris":36480,"map":"2048x1024"},"GANYMEDE":{"tris":36480,"map":"2048x1024"}}}
+HIGH Europa hi wait 386 {"frame":232.4,"tris":72964,"b":{"JUPITER":{"tris":65024,"map":"2048x1024"},"EUROPA":{"tris":36480,"map":"2048x1024"},"IO":{"tris":36480,"map":"2048x1024"},"GANYMEDE":{"tris":36480,"map":"2048x1024"},"CALLISTO":{"tris":36480,"map":"2048x1024"}}}
+HIGH orbiter {"ORBITER.body":13188}
+HIGH Amalthea hi wait 1389 {"frame":131.3,"tris":36482,"b":{"JUPITER":{"tris":65024,"map":"2048x1024"},"AMALTHEA":{"tris":36480,"map":"2048x1024"},"IO":{"tris":36480,"map":"2048x1024"},"EUROPA":{"tris":36480,"map":"2048x1024"},"GANYMEDE":{"tris":36480,"map":"2048x1024"},"CALLISTO":{"tris":36480,"map":"2048x1024"}}}
+HIGH ERRS []

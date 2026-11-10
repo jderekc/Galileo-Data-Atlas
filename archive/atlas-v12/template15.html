@@ -1,0 +1,1112 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Galileo Data Atlas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500&display=swap">
+<style>
+/* Layout: header, a whole-mission strip, one 3D stage with a live readout, a side column of selectors and notes, and a time dock. Data only: no fitted models. */
+:root{
+  --bg:#0a0c13; --panel:#10131d; --panel2:#161b29; --line:#262d42; --fg:#e4e8f2; --mute:#9aa4bd;
+  --meas:#ffb347; --acc:#5cc8ff; --lit:#b9a3ff; --pos:#ff7a59; --neg:#5aa9ff; --ok:#6fd6a0; --warn:#ffcf5c;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --cond:'IBM Plex Sans Condensed','IBM Plex Sans',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;--u:1;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font:max(10.5px,calc(14px*var(--u)))/1.45 var(--sans);margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:12px;display:flex;flex-direction:column}
+button,select,input{font:inherit;color:inherit}
+button:focus-visible,select:focus-visible,input:focus-visible,canvas:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+#app{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 10px var(--sideW,328px);grid-template-rows:auto auto minmax(190px,1fr) 10px auto;gap:6px 0}
+header{grid-column:1/4;display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 20px}
+h1{margin:0;font:600 max(10.5px,calc(20px*var(--u)))/1.1 var(--cond);letter-spacing:.06em;text-transform:uppercase}
+.sub{color:var(--mute);font-size:max(10.5px,calc(12.5px*var(--u)));margin-top:3px}
+.tabs{display:flex;gap:4px}
+.tabs button{background:transparent;border:1px solid var(--line);border-radius:5px;padding:6px 12px;cursor:pointer;color:var(--mute);font:500 max(10.5px,calc(13px*var(--u))) var(--cond);letter-spacing:.05em;text-transform:uppercase}
+.tabs button[aria-selected=true]{background:var(--panel2);color:var(--fg);border-color:#3a4466}
+#mission{grid-column:1/4;margin-bottom:4px;position:relative;height:78px;background:var(--panel);border:1px solid var(--line);border-radius:6px}
+#mc{position:absolute;inset:0;width:100%;height:100%;cursor:pointer;touch-action:manipulation}
+#mtip{position:absolute;z-index:5;pointer-events:none;background:rgba(10,12,19,.94);border:1px solid #3a4466;border-radius:5px;padding:5px 8px;font:max(10.5px,calc(12px*var(--u)))/1.4 var(--sans);display:none;max-width:300px}
+#stage{grid-column:1;grid-row:3;position:relative;min-height:190px;min-width:0;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#06080e}
+#gl{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#hud{position:absolute;left:10px;top:10px;background:rgba(10,12,19,.78);border:1px solid var(--line);border-radius:5px;padding:6px 9px;font:max(10.5px,calc(11.5px*var(--u)))/1.5 var(--mono);pointer-events:none;width:max-content;max-width:min(340px,calc(100% - 20px));max-height:calc(100% - 20px - var(--legendH,0px));overflow:hidden}
+#hud .hh{display:flex;gap:8px;align-items:center}
+#hud .hh .t{flex:1}
+#hud .chip{pointer-events:auto;cursor:default;font:max(10.5px,calc(11px*var(--u))) var(--cond);padding:0 7px;border-radius:9px;border:1px solid;white-space:nowrap}
+#hud .chip.m{color:#ffb347;border-color:#ffb347}
+#hud .chip.m:hover{border-color:#ffb347}#hud .chip.g:hover{border-color:#b4bccd}#hud .chip.n:hover{border-color:#ff7a59}
+#hud .chip.g{color:#b4bccd;border-color:#b4bccd}
+#hud .chip.n{color:#ff7a59;border-color:#ff7a59}
+#hud button{position:absolute;right:0;top:0;pointer-events:auto;background:none;border:0;color:var(--mute);cursor:pointer;font:max(10.5px,calc(13px*var(--u))) var(--mono);padding:4px 8px;min-width:26px;min-height:26px}
+#hud .hh{padding-right:22px}
+#hud .sq{display:inline-block;width:7px;height:7px;margin-left:3px;box-sizing:border-box}
+#hud .pr{white-space:nowrap}
+#hud .hg{display:grid;grid-template-columns:auto auto auto auto;gap:0 8px;justify-content:start;align-items:baseline}
+#hud .hg .w2{grid-column:span 3}
+#hud .hn{margin-top:3px;font-size:max(10.5px,calc(11px*var(--u)));line-height:1.4;white-space:normal}
+#hud .hl{margin-top:4px;border-top:1px solid #262d42;padding-top:3px}
+#hud .hlc{display:flex;gap:6px;align-items:baseline;white-space:nowrap}
+#hud .hlc i{display:inline-block;width:8px;height:8px;flex:none}
+#hud .t{font-weight:500;color:var(--fg);font-size:max(10.5px,calc(13px*var(--u)))}
+#hud .k{color:var(--mute)}
+#hud b{font-weight:500}
+.pos{color:var(--pos)}.neg{color:var(--neg)}.warnc{color:var(--warn)}.meas{color:var(--meas)}
+#legend{position:absolute;left:10px;bottom:10px;right:10px;display:flex;flex-wrap:wrap;gap:4px 12px;font:max(10.5px,calc(11.5px*var(--u))) var(--cond);letter-spacing:.03em;color:var(--mute);pointer-events:none}
+#legend i{display:inline-block;width:14px;height:0;border-top:2px solid;vertical-align:middle;margin-right:5px}
+#legend i.d{border-top-style:dashed}
+#gate,#busy{position:absolute;inset:0;display:none;align-items:center;justify-content:center;text-align:center;padding:24px;color:var(--mute);background:rgba(6,8,14,.6)}
+#side{grid-column:3;grid-row:3/6;overflow:auto;min-height:0;display:flex;flex-direction:column;gap:12px;padding-right:2px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px 12px}
+.card h2{margin:0 0 7px;font:600 max(10.5px,calc(12px*var(--u))) var(--cond);letter-spacing:.09em;text-transform:uppercase;color:var(--mute)}
+.layers label{display:flex;align-items:center;gap:8px;padding:3px 0;cursor:pointer;font-size:max(10.5px,calc(13px*var(--u)))}
+.layers input{accent-color:var(--acc);margin:0}
+.sw{width:14px;height:0;border-top:3px solid;flex:none}
+.sw.d{border-top-style:dashed}
+.row{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:5px 9px;cursor:pointer;font-size:max(10.5px,calc(12.5px*var(--u)))}
+.chip:hover{border-color:#3a4466}
+#hud .chip:hover{border-color:inherit}
+.chip[aria-pressed=true]{border-color:var(--acc);color:var(--acc)}
+.chip .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:baseline}
+ul.n{margin:0;padding-left:16px;font-size:max(10.5px,calc(12.8px*var(--u)));color:#c4cbde}
+ul.n li{margin:3px 0}
+.src{font-size:max(10.5px,calc(11.5px*var(--u)));color:var(--mute)}
+.src a{color:var(--acc)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:max(10.5px,calc(12.8px*var(--u)));margin:0}
+.kv dt{color:var(--mute)}.kv dd{margin:0;font-family:var(--mono);font-size:max(10.5px,calc(12.2px*var(--u)))}
+select{background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:5px 8px;max-width:100%}
+select.full{width:100%}
+.selrow{display:flex;gap:6px;align-items:center}
+.selrow select{flex:1;min-width:0}
+.selrow button{background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:5px 10px;cursor:pointer}
+#dock{grid-column:1;grid-row:5;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 12px 10px;min-width:0}
+.ctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-bottom:6px}
+#play{background:var(--acc);color:#04131c;border:0;border-radius:5px;padding:6px 14px;font:600 max(10.5px,calc(13px*var(--u))) var(--cond);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;min-width:74px}
+#clock{font:500 max(10.5px,calc(13px*var(--u))) var(--mono);margin-left:auto}
+#tlwrap{position:relative;height:116px}
+#tl{position:absolute;inset:0;width:100%;height:100%;cursor:ew-resize;touch-action:none}
+#cur{position:absolute;top:0;bottom:0;width:0;border-left:1.5px solid var(--fg);pointer-events:none}
+#scrub{width:100%;margin:6px 0 0;accent-color:var(--acc)}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.dt .src{margin:0 0 3px}
+.dt .sel8{font-size:max(10.5px,calc(11.5px*var(--u)));color:var(--mute);margin:6px 0 2px}
+details.grp{border-top:1px solid var(--line);padding:5px 0 3px}
+details.grp:first-of-type{margin-top:8px}
+details.grp summary{cursor:pointer;font:500 max(10.5px,calc(12.5px*var(--u))) var(--cond);letter-spacing:.04em;display:flex;justify-content:space-between;gap:8px;list-style:none;color:var(--fg)}
+details.grp summary::-webkit-details-marker{display:none}
+details.grp summary::before{content:'\25B8';color:var(--mute);margin-right:6px;display:inline-block;transition:transform .12s}
+details.grp[open] summary::before{transform:rotate(90deg)}
+details.grp summary .c{margin-left:auto;color:var(--mute);font-weight:400}
+.lyr{display:flex;align-items:flex-start;gap:8px;padding:3px 0 3px 14px;font-size:max(10.5px,calc(12.5px*var(--u)));cursor:pointer}
+.lyr input{accent-color:var(--acc);margin:3px 0 0}
+.lyr .nm{flex:1;min-width:0}
+.lyr small{display:block;color:var(--mute);font-size:max(10.5px,calc(11px*var(--u)));line-height:1.3}
+.lyr .sq{width:9px;height:9px;border-radius:2px;margin-top:4px;flex:none;border:1px solid var(--line)}
+.gradbar{display:inline-block;width:96px;height:8px;border-radius:2px;vertical-align:middle;margin:0 5px;background:linear-gradient(90deg,#440154,#33608c,#21908d,#5ec962,#fde725)}
+#hsplit,#vsplit{position:relative;touch-action:none;z-index:3}
+#hsplit{grid-column:1;grid-row:4;cursor:ns-resize}
+#vsplit{grid-column:2;grid-row:3/6;cursor:ew-resize}
+#hsplit::before,#vsplit::before{content:'';position:absolute;border-radius:3px;background:var(--line);transition:background .12s}
+#hsplit::before{left:50%;top:3px;width:56px;height:4px;transform:translateX(-50%)}
+#vsplit::before{top:50%;left:3px;height:56px;width:4px;transform:translateY(-50%)}
+#hsplit:hover::before,#vsplit:hover::before,#hsplit.on::before,#vsplit.on::before,#hsplit:focus-visible::before,#vsplit:focus-visible::before{background:var(--acc)}
+#hsplit:focus-visible,#vsplit:focus-visible{outline:none}
+.grp2{display:flex;align-items:center;gap:6px}
+.grp2 .gl{font:500 max(10.5px,calc(11px*var(--u))) var(--cond);letter-spacing:.07em;text-transform:uppercase;color:var(--mute)}
+.grp2 .chip{padding:4px 8px;font-size:max(10.5px,calc(12px*var(--u)))}
+#hstat{position:absolute;right:10px;top:10px;font:max(10.5px,calc(11.5px*var(--u))) var(--cond);letter-spacing:.03em;color:var(--mute);background:rgba(10,12,19,.78);border:1px solid var(--line);border-radius:5px;padding:3px 8px;pointer-events:none}
+#tltip{position:absolute;z-index:6;pointer-events:none;background:rgba(10,12,19,.95);border:1px solid #3a4466;border-radius:5px;padding:5px 8px;font:max(10.5px,calc(11.5px*var(--u)))/1.45 var(--mono);max-width:300px}
+#tltip .k{color:var(--mute)}
+#tlguide{position:absolute;top:0;bottom:0;width:0;border-left:1px dashed rgba(228,232,242,.45);pointer-events:none}
+[hidden]{display:none!important}
+.tabs button.sidetog{margin-left:6px;text-transform:none;letter-spacing:.02em}
+.tabs button.sidetog[aria-pressed=true]{color:var(--acc);border-color:var(--acc)}
+@media (max-width:880px){.tabs button.sidetog{display:none}}
+#lead{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#legend .lgi{display:flex;flex-wrap:wrap;gap:3px 12px;min-width:0}
+#legend .lgb{display:none;pointer-events:auto;background:rgba(10,12,19,.78);border:1px solid var(--line);border-radius:5px;padding:3px 10px;min-height:22px;font:inherit;color:var(--mute);cursor:pointer}
+#legend.cmp{right:auto;flex-direction:column;align-items:flex-start;gap:4px}
+#legend.cmp .lgb{display:inline-block}
+#legend.cmp .lgi{display:none}
+#legend.cmp.open .lgi{display:flex;background:rgba(10,12,19,.9);border:1px solid var(--line);border-radius:5px;padding:5px 8px;max-width:calc(100vw - 60px)}
+#legend u.ds{display:inline-block;width:7px;height:7px;border-radius:50%;background:#b4bccd;margin:0 5px 0 -1px;vertical-align:middle;text-decoration:none}
+@media (min-width:881px) and (max-width:1180px){
+  #mission{height:70px}
+  #runGrp .gl,#viewGrp .gl{display:inline}
+  .grp2 .gl.lay{display:none}
+  .ctl{gap:6px 8px}
+  #play{padding:5px 10px;min-width:60px}
+  .grp2 .chip{padding:3px 6px}
+  .tabs button{padding:5px 9px}
+}
+@media (max-width:880px){
+  html,body{height:auto}
+  #app{grid-template-columns:minmax(0,1fr);grid-template-rows:none}
+  header,#mission,#stage,#dock,#side{grid-column:1;grid-row:auto}
+  #hsplit,#vsplit{display:none}
+  #stage{height:var(--stageH,64vh);min-height:260px}
+  #side{overflow:visible}
+  #hud{font-size:max(10.5px,calc(11px*var(--u)));padding:6px 8px}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+
+<div id="app">
+  <header>
+    <div>
+      <h1>Galileo Data Atlas</h1>
+      <div class="sub" id="sub">Galileo orbiter data, 1995 to 2003</div>
+    </div>
+    <div class="tabs" role="tablist" aria-label="View">
+      <button role="tab" id="tabA" aria-selected="true" aria-controls="stage">Jupiter system</button>
+      <button role="tab" id="tabB" aria-selected="false" aria-controls="stage">Moon pass</button>
+      <button id="sideTog" class="sidetog" type="button" aria-pressed="true" title="Show or hide the side panel">Side panel</button>
+    </div>
+  </header>
+
+  <section id="mission" aria-label="Whole mission: choose a survey segment or a moon pass">
+    <canvas id="mc"></canvas><div id="mtip"></div>
+  </section>
+
+  <section id="stage" aria-label="3D view">
+    <canvas id="gl" tabindex="0" aria-label="Interactive 3D view. Drag to rotate, scroll to zoom."></canvas>
+    <div id="hud" aria-live="off"><button id="hudx" type="button"></button><div id="hudc"></div></div>
+    <div id="legend"></div>
+    <div id="hstat" hidden></div>
+    <div id="busy">Loading data…</div>
+    <div id="gate">WebGL is not available in this browser, so the 3D view cannot draw.</div>
+  </section>
+
+  <div id="hsplit" role="separator" aria-orientation="horizontal" tabindex="0" aria-label="Resize the 3D view and the graph. Drag, or use the arrow keys."></div>
+  <div id="vsplit" role="separator" aria-orientation="vertical" tabindex="0" aria-label="Resize the side panel. Drag, or use the arrow keys."></div>
+  <aside id="side">
+    <div class="card" id="cSeg">
+      <h2>Survey segment</h2>
+      <div class="selrow"><button id="segPrev" aria-label="Previous segment">&#9664;</button><select id="segSel" aria-label="Survey segment"></select><button id="segNext" aria-label="Next segment">&#9654;</button></div>
+      <dl class="kv" id="segInfo" style="margin-top:8px"></dl>
+    </div>
+    <div class="card" id="cSegFly">
+      <h2>Moon passes in this segment</h2>
+      <div class="row" id="segFly"></div>
+    </div>
+    <div class="card dt" id="cData">
+      <h2>Data types</h2>
+      <label class="src" for="pcSel">Colour the path by (the graph's main panel follows this)</label>
+      <select id="pcSel" class="full" aria-label="Colour the path by"></select>
+      <div class="src" style="margin:10px 0 5px">Time panel</div>
+      <div class="row" id="tpMode" role="group" aria-label="Time panel style">
+        <button class="chip" data-m="strips" aria-pressed="true">Stacked strips</button>
+        <button class="chip" data-m="lines" aria-pressed="false">Overlaid lines</button>
+        <button class="chip" id="lyClear">Clear</button>
+      </div>
+      <div class="sel8" id="lyCount">Tick data types to add them to the time panel (up to 8).</div>
+      <div id="lyGroups"></div>
+    </div>
+    <div class="card layers" id="layersA">
+      <h2>Layers</h2>
+      <label><input type="checkbox" data-l="hist" checked><span class="sw" style="border-color:#6b7799;opacity:.6"></span>Earlier orbits, fading with age</label>
+      <label><input type="checkbox" data-l="planet" checked><span class="sw" style="border-color:#d9b27a"></span>Jupiter with System III grid</label>
+      <label><input type="checkbox" data-l="trace" checked><span class="sw" style="border-color:#b4bccd"></span>Orbit trace and inferred position (grey)</label>
+      <label><input type="checkbox" data-l="track" checked><span class="sw" style="border-color:var(--pos)"></span>Measured path</label>
+      <label><input type="checkbox" data-l="bvec" checked><span class="sw" style="border-color:var(--meas)"></span>Measured field direction</label>
+      <label><input type="checkbox" data-l="moons" checked><span class="sw" style="border-color:var(--lit)"></span>Moons and their orbits</label>
+      <label><input type="checkbox" data-l="mline" checked><span class="sw" style="border-color:var(--lit)"></span>Line to the nearest moon</label>
+      <label><input type="checkbox" data-l="fl" checked><span class="sw" style="border-color:#fff"></span>Moon-pass markers on the path</label>
+      <label><input type="checkbox" data-l="rings" checked><span class="sw" style="border-color:#4f77b8"></span>Distance rings and local-time labels</label>
+      <label><input type="checkbox" data-l="dipA"><span class="sw d" style="border-color:var(--lit)"></span>Dipole shape, illustration only</label>
+    </div>
+    <div class="card" id="camA">
+      <h2>Camera</h2>
+      <div class="row" id="tgtA" role="group" aria-label="Camera target">
+        <button class="chip" data-t="jupiter" aria-pressed="true">Jupiter</button>
+        <button class="chip" data-t="probe" aria-pressed="false">Probe</button>
+        <button class="chip" data-t="IO" aria-pressed="false">Io</button>
+        <button class="chip" data-t="EUROPA" aria-pressed="false">Europa</button>
+        <button class="chip" data-t="GANYMEDE" aria-pressed="false">Ganymede</button>
+        <button class="chip" data-t="CALLISTO" aria-pressed="false">Callisto</button>
+      </div>
+      <div class="row" style="margin-top:6px" id="viewsA">
+        <button class="chip" data-v="top">North pole view</button>
+        <button class="chip" data-v="side">Edge-on</button>
+        <button class="chip" data-v="sun">From the Sun</button>
+        <button class="chip" data-v="fit">Whole path</button>
+      </div>
+    </div>
+    <div class="card" id="jumpsA">
+      <h2>Jump to</h2>
+      <div class="row">
+        <button class="chip" data-j="start">Segment start</button>
+        <button class="chip" data-j="peri">Closest to Jupiter</button>
+        <button class="chip" data-j="apo">Farthest from Jupiter</button>
+        <button class="chip" data-j="end">Segment end</button>
+      </div>
+    </div>
+    <div class="card" id="notesA">
+      <h2>What this view shows</h2>
+      <ul class="n">
+        <li><b class="meas">Measured:</b> probe path and field vector (Jupiter-Sun-Ecliptic frame, Sun toward +X, +Z up; Jupiter is drawn spinning about Z), plotted as 4-minute medians of the survey files. Br is from the System III file. The Br colouring only separates positive from negative; values under 0.5 nT in size are grey.</li>
+        <li><b>Why some gaps exist</b> is not in the data files. Two published accounts: the 1998-02-10 flyby (E13) entry of the <a href="https://en.wikipedia.org/wiki/Timeline_of_Galileo_(spacecraft)" target="_blank" rel="noopener">Galileo timeline</a> says no remote sensing or magnetospheric data were collected because of solar conjunction, which reduced the capacity to transmit science data to Earth; the entry describes that flyby only, and it is shown wherever there is no field data between 1997-12-20 and 1998-03-28 (orbit 13 has magnetometer points inside that span). A <a href="https://spaceflightnow.com/news/n0201/18galileo" target="_blank" rel="noopener">Spaceflight Now report</a> says the spacecraft entered safe mode at 13:41 UTC on 2002-01-17, 28 minutes before closest approach to Io, and the instruments went to standby; it is shown for the field-data gap that contains that time (2002-01-17 12:46 to 2002-01-18 00:22 UTC).</li>
+        <li><b>Gaps</b> in the coloured path or the strips are gaps in the archive's field and instrument files. The light-grey trace is the whole path from the archive's trajectory files, drawn up to the current time and fading with age like the coloured paths. Where the grey dot or trace has no colour over it, the position comes from the trajectory file and nothing was measured there by the magnetometer. Where the trajectory files have a hole, positions from the field files are used if they exist. A few stretches have no position in the archive at all (the longest are about 40 and 42 days, January to March 1998); the dot is hidden there.</li>
+        <li><b>Readout symbols:</b> the atlas carries values on the field file's own time grid. Status: ● the cursor is at a point of that grid; ○ no point of that grid here (position only); ∅ no position in the archive. Instrument letters: ● a value at this grid point (a coded zero counts as a value); ○ no value at this grid point; ∅ no values for that instrument anywhere in this segment's points. These describe what the atlas carries, not what each instrument's own files contain. Each small square under "layers" is one ticked layer, filled when it has a value here.</li>
+        <li><b class="meas">Run:</b> playback goes through every orbit in time order, loading the next one as it goes, and runs through the gaps between orbit files at the real date (use a faster speed to cross the long ones). Choose "This orbit" to stay inside one. Earlier orbits stay drawn and fade with age (the oldest fade to a fixed, faint minimum).</li>
+        <li><b class="meas">Graph:</b> the main panel shows whatever the path colour is set to (field strength, signed Br, or any instrument layer) as a per-pixel mean with its minimum-to-maximum range shaded. The panels can be resized: drag the bars between them, or use the Layout buttons.</li>
+        <li><b class="meas">Other instruments (Data types):</b> each value is the time-weighted mean of that instrument's own samples overlapping a 4-minute point. Nothing is interpolated across gaps, and a point needs at least a quarter of its 4 minutes covered. Values are drawn on a log scale; each layer's range runs from the 0.2nd to the 99.9th percentile of its non-zero values over the mission, rounded outward to the next 0.1 in log10, and larger values are drawn at the top colour. Values are as given in the PDS files: this page applies no calibration, background correction or unit conversion.</li>
+        <li><b>What the layers are:</b> EPD, 11-minute scan-average count rates from the archive's "C_" files (adjusted by the archive for gaps between detector cycles), averaged over the 16 sectors. PLS, spin-averaged count rates summed over the energy bands present in each record (14 at most; some records lack band 1 or 2 and are summed over the rest). PWS, geometric mean of the 1-minute spectral density over the frequency range shown. HIC, low-resolution survey count rates. DDS, dust-detector events per hour in a 1-hour window; a zero can mean no events or no operation, and no operating mask is applied.</li>
+        <li><b>Coverage:</b> EPD channels A3 to A5, TP1, TO1 and TS1 have values only in orbits 3, 7 to 11, 16, 17 and 24 (A3 also 18). PWS magnetic spectra end in March 2003. HIC samples are sparse away from the moon passes.</li>
+        <li><b>Moons:</b> positions come from the PDS moon-trajectory tables, which cover a few days around each orbit (solid bar on the time strip). Between tables each moon's position is interpolated from its own table values and an eccentric-orbit fit to them (dotted). The planet is drawn at a constant rotation rate within each survey file; against the System III longitudes stored in the files the drawn rotation differs by at most 1.4 degrees. The probe position is interpolated linearly between 4-minute points and is hidden where the gap to the nearest point is longer than the gap limit. Against the closest-approach distances in the PDS flyby tables, the probe-to-moon distance in this view differs by <span id="mchk">a median of 244 km over the 34 Io, Europa, Ganymede and Callisto passes (22 within 1,000 km, 27 within 2,000 km). The largest differences are E16 at 594,916 km, E18 at 254,192 km and I33 at 54,693 km, where the survey file has no point within hours of closest approach, then I25 at 7,695 km and C30 at 6,786 km</span>.</li>
+        <li><b>File overlaps:</b> at 11 of the 38 file boundaries the last 4-minute point of one file is later than the first point of the next (by up to 2,791 s, at ORB23 to ORB24). At those boundaries the clock steps back by the overlap and the overlapping span appears twice.</li>
+        <li><b>Not included:</b> radio-occultation profiles (RSS), star-scanner records (SSD), the high-resolution moon-pass products of EPD, PLS, PWS and HIC, and any quantity away from the path. Apart from the moon interpolation and planet rotation phase described above, nothing here is fitted or predicted.</li>
+        <li><b>Illustration:</b> the optional dipole lines only show the shape of a tilted dipole. Strength is not drawn and it is not a fit.</li>
+      </ul>
+    </div>
+
+    <div class="card" id="cFly" hidden>
+      <h2>Moon pass</h2>
+      <div class="selrow"><button id="flyPrev" aria-label="Previous pass">&#9664;</button><select id="flySel" aria-label="Moon pass"></select><button id="flyNext" aria-label="Next pass">&#9654;</button></div>
+      <dl class="kv" id="flyInfo" style="margin-top:8px"></dl>
+      <div class="row" style="margin-top:8px"><button class="chip" id="toJup">Show in Jupiter system</button></div>
+    </div>
+    <div class="card" id="cMoon" hidden>
+      <h2>The moon</h2>
+      <dl class="kv" id="moonInfo"></dl>
+    </div>
+    <div class="card layers" id="layersB" hidden>
+      <h2>Layers</h2>
+      <label><input type="checkbox" data-l="path" checked><span class="sw" style="border-color:var(--meas)"></span>Path, coloured by field strength</label>
+      <label><input type="checkbox" data-l="vec" checked><span class="sw" style="border-color:var(--meas)"></span>Measured field vectors</label>
+      <label><input type="checkbox" data-l="axes" checked><span class="sw" style="border-color:#4f77b8"></span>Flow, Jupiter and north axes</label>
+      <label id="dipBlab"><input type="checkbox" data-l="dipB"><span class="sw d" style="border-color:var(--lit)"></span>Ganymede dipole shape, illustration only</label>
+    </div>
+    <div class="card" id="camB" hidden>
+      <h2>Camera</h2>
+      <div class="row" id="tgtB" role="group" aria-label="Camera target">
+        <button class="chip" data-t="moon" aria-pressed="true">Centre on the moon</button>
+        <button class="chip" data-t="probe" aria-pressed="false">Follow probe</button>
+        <button class="chip" data-t="fit" aria-pressed="false">Reset view</button>
+      </div>
+    </div>
+    <div class="card" id="jumpsB" hidden>
+      <h2>Jump to</h2>
+      <div class="row">
+        <button class="chip" data-j="b0">Window start</button>
+        <button class="chip" data-j="ca">Closest approach</button>
+        <button class="chip" data-j="peak">Field peak</button>
+        <button class="chip" data-j="b1">Window end</button>
+      </div>
+    </div>
+    <div class="card" id="notesB" hidden>
+      <h2>What this view shows</h2>
+      <ul class="n">
+        <li><b class="meas">Measured:</b> field vector in the moon's own frame, and the probe's path relative to the moon (PDS data). High-resolution files are shown as 3-second medians.</li>
+        <li><b>Axes:</b> x along the direction the plasma corotates with Jupiter, y toward Jupiter, z north.</li>
+        <li><b>Survey-only passes:</b> where the archive has no high-resolution file, the path comes from the PDS flyby table and the field from the survey file (samples every few tens of seconds to minutes), rotated into the moon's frame. These can miss fast changes.</li>
+        <li><b>Other instruments:</b> drawn from the same survey products, on a 1-minute grid. A bin shows the instrument samples that overlap it, so a slow instrument repeats across several bins and a fast change can be missed. The high-resolution moon-pass products of these instruments are not included.</li>
+        <li><b>Not included:</b> any quantity away from the path.</li>
+        <li><b>Illustration:</b> the optional Ganymede dipole lines only show the shape of a dipole. Strength and tilt are not drawn and nothing is fitted.</li>
+      </ul>
+    </div>
+    <div class="card src">
+      Data: NASA PDS Planetary Plasma Interactions node. Other instruments: EPD (GO-J-EPD-2-REDR-RTS-SCAN-AVG-V1.0), PLS (GO-J-PLS-4-SUMM-BROWSE-V1.0), PWS (GO-J-PWS-4-SUMM-SA60S-V1.0), HIC (GO-J-HIC-3-RDR-SURVEY-COUNTRATE-V1.0), DDS (GO-D-GDDS-5-DUST-V4.1). Magnetometer: Galileo magnetospheric survey (GO-J-MAG-3-RDR-MAGSPHERIC-SURVEY-V1.0) and moon-flyby high-resolution sets (GO-J-MAG-3-HIGHRES-V1.0), spacecraft trajectories relative to the moons (GO-J-POS-6-SC-TRAJ-MOON-COORDS-V1.0) and moon trajectories (GO-J-POS-6-MOON-TRAJ-JUP-CRDS-V1.0). Moon sizes: mean radii. Dipole tilt used for the illustration: about 9.6° (a drawing parameter, not measured here). Planet and moon surfaces are drawn, not imaged.
+    </div>
+  </aside>
+
+  <footer id="dock">
+    <div class="ctl">
+      <button id="play" aria-label="Play or pause">Play</button>
+      <label class="vh" for="speed">Playback speed</label>
+      <select id="speed"></select>
+      <div class="grp2" id="runGrp"><span class="gl">Run</span><div class="row" id="runSel" role="group" aria-label="Playback range">
+        <button class="chip" data-r="all" aria-pressed="true">All orbits</button><button class="chip" data-r="one" aria-pressed="false">This orbit</button></div></div>
+      <div class="grp2" id="viewGrp"><span class="gl">Graph</span><div class="row" id="viewSel" role="group" aria-label="Graph range">
+        <button class="chip" data-gv="orbit" aria-pressed="true">This orbit</button><button class="chip" data-gv="mission" aria-pressed="false">Whole mission</button></div></div>
+      <div class="grp2"><span class="gl lay">Layout</span><div class="row" id="laySel" role="group" aria-label="Panel layout">
+        <button class="chip" data-lay="3d" aria-pressed="false">3D focus</button><button class="chip" data-lay="split" aria-pressed="true">Split</button><button class="chip" data-lay="graph" aria-pressed="false">Graph focus</button></div><button class="chip" aria-hidden="true" hidden></button></div>
+      <span id="clock">—</span>
+    </div>
+    <div id="tlwrap"><canvas id="tl" aria-hidden="true"></canvas><div id="cur"></div><div id="tlguide" hidden></div><div id="tltip" hidden></div></div>
+    <input type="range" id="scrub" min="0" max="1000" value="0" aria-label="Time">
+  </footer>
+</div>
+
+<script type="application/json" id="pack">__PACK__</script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function(){
+'use strict';
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const P=JSON.parse($('#pack').textContent), SEGS=P.segs, FLYS=P.flys, MOONS=P.moons;
+const SEGBY={}; SEGS.forEach((s,i)=>{s.idx=i;SEGBY[s.id]=s});
+const FLYBY={}; FLYS.forEach(f=>FLYBY[f.id]=f);
+const OFF=[]; let G=0; SEGS.forEach(s=>{OFF.push(G);G+=s.span});   /* mission clock: real UTC, gaps between orbit files included (each segment's span runs to the start of the next) */
+const MBY={}; MOONS.forEach(m=>MBY[m.key]=m);
+const LAYERS=P.layers||[], LIDX={}; LAYERS.forEach((l,i)=>{l.i=i;l.u=l.unit.split(' (')[0];LIDX[l.id]=l});
+const LSEG=P.lsegs||{}, LFLY=P.lflys||{};
+const GRPN={EPD:'Energetic particles (EPD)',PLS:'Plasma (PLS)',PWS:'Plasma waves (PWS)',HIC:'Heavy ions (HIC)',DDS:'Dust (DDS)'};
+const PAL=['#5cc8ff','#ffb347','#7ee0a5','#ff7a59','#b9a3ff','#f2e86d','#ff8fd0','#9fe3ff'];
+const RAD=Math.PI/180, TAU=Math.PI*2, RJKM=71492;
+const MK=['IO','EUROPA','GANYMEDE','CALLISTO'];
+const MCOL={IO:0xffd24a,EUROPA:0x9fe3ff,GANYMEDE:0xb9a3ff,CALLISTO:0xff9b6b,AMALTHEA:0x7ee0a5};
+const hex=c=>'#'+c.toString(16).padStart(6,'0');
+const LET={IO:'I',EUROPA:'E',GANYMEDE:'G',CALLISTO:'C',AMALTHEA:'A'};
+const COL={pos:0xff7a59,neg:0x5aa9ff,weak:0x7861ad,meas:0xffb347,lit:0xb9a3ff};
+
+/* ---------- decoding (zlib via DecompressionStream) ---------- */
+async function inflate(b64){const bin=atob(b64),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+  const ds=new DecompressionStream('deflate');return await new Response(new Blob([u]).stream().pipeThrough(ds)).arrayBuffer()}
+const segCache={}, flyCache={}, lsCache={}, lfCache={};
+async function decodeL(info,n){if(!info)return {};const buf=new Uint8Array(await inflate(info.b)),o={};info.k.forEach((k,j)=>o[k]=buf.subarray(j*n,(j+1)*n));return o}
+async function getSegL(s){if(!(s.id in lsCache))lsCache[s.id]=await decodeL(LSEG[s.id],s.n);return lsCache[s.id]}
+async function getFlyL(f){const i=LFLY[f.id];if(!(f.id in lfCache))lfCache[f.id]=await decodeL(i,i?i.nb:0);return lfCache[f.id]}
+async function getSeg(s){if(segCache[s.id])return segCache[s.id];
+  const buf=await inflate(s.blob),n=s.n,m=s.m;let o=0;
+  const f32=c=>{const a=new Float32Array(buf.slice(o,o+4*c));o+=4*c;return a};
+  const i16=(c,sc)=>{const r=new Int16Array(buf.slice(o,o+2*c));o+=2*c;const a=new Float32Array(c);for(let i=0;i<c;i++)a[i]=r[i]*sc;return a};
+  const d={ts:f32(n),X:i16(n,s.ps),Y:i16(n,s.ps),Z:i16(n,s.ps),Bx:i16(n,s.bs),By:i16(n,s.bs),Bz:i16(n,s.bs),B:i16(n,s.bs),Br:i16(n,s.bs)};
+  const r=new Uint16Array(buf.slice(o,o+2*n));o+=2*n;d.wl=new Float32Array(n);for(let i=0;i<n;i++)d.wl[i]=r[i]/65536*360;
+  d.moon={};MK.forEach(k=>{d.moon[k]={az:f32(m),R:f32(m),lat:f32(m)}});
+  const dt=[];for(let i=1;i<n;i+=Math.max(1,Math.floor(n/400)))dt.push(d.ts[i]-d.ts[i-1]);dt.sort((a,b)=>a-b);
+  d.gap=Math.max(900,3*(dt[dt.length>>1]||240));
+  if(s.novec)['Bx','By','Bz','Br'].forEach(k=>d[k].fill(NaN));
+  segCache[s.id]=d;return d}
+async function getFly(f){if(flyCache[f.id])return flyCache[f.id];
+  const buf=await inflate(f.blob);let o=0;const f32=c=>{const a=new Float32Array(buf.slice(o,o+4*c));o+=4*c;return a};
+  const d={tp:f32(f.np),x:f32(f.np),y:f32(f.np),z:f32(f.np)};
+  if(f.res==='hi'){d.tf=d.tp}else d.tf=f32(f.nf);
+  d.bx=f32(f.nf);d.by=f32(f.nf);d.bz=f32(f.nf);d.bm=new Float32Array(f.nf);for(let i=0;i<f.nf;i++)d.bm[i]=Math.hypot(d.bx[i],d.by[i],d.bz[i]);
+  flyCache[f.id]=d;return d}
+
+/* ---------- helpers ---------- */
+function bis(a,t){let lo=0,hi=a.length-1;if(t<=a[0])return 0;if(t>=a[hi])return Math.max(0,hi-1);while(hi-lo>1){const m=(lo+hi)>>1;if(a[m]<=t)lo=m;else hi=m}return lo}
+function lerp(ts,v,t){if(ts.length<2)return v[0]||0;const i=bis(ts,t),f=Math.min(1,Math.max(0,(t-ts[i])/(ts[i+1]-ts[i]||1)));return v[i]+(v[i+1]-v[i])*f}
+function near(ts,t){const i=bis(ts,t);return (ts.length>1&&t-ts[i]>ts[i+1]-t)?i+1:i}
+const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
+const fmtMs=ms=>new Date(ms).toISOString().replace('T',' ').slice(0,19);
+const fmtD=ms=>new Date(ms).toISOString().slice(0,10);
+const f1=(x,d=1)=>(x>=0?'+':'')+x.toFixed(d);
+function vir(t){t=clamp(t,0,1);const s=[[.27,0,.33],[.2,.37,.55],[.13,.57,.55],[.37,.79,.38],[.99,.91,.14]];const x=t*4,i=Math.min(3,Math.floor(x)),f=x-i;return s[i].map((c,k)=>c+(s[i+1][k]-c)*f)}
+const MISS=[.13,.32,.36], ZERO=[.55,.36,.2];   /* no value: dark teal; at or below the layer's range: bronze; grey is kept for trajectory-file positions */
+const layerRGB=q=>q===0?MISS:(q===1?ZERO:vir((q-2)/253));
+const rgbCss=c=>'rgb('+c.map(v=>Math.round(v*255)).join(',')+')';
+function lval(l,q){return Math.pow(10,l.lo+(q-2)/253*(l.hi-l.lo))}
+function numFmt(v){return (v>=0.01&&v<1e5)?String(+v.toPrecision(2)):v.toExponential(1).replace('e+','e')}
+function fmtL(l,q){return q===0?'no data':(q===1?'0 or below range':'~'+numFmt(lval(l,q))+' '+l.u)}
+const lname=l=>l.grp+' '+l.name;
+function ramp(v){v=clamp(v,0,1);const s=[[.16,.26,.55],[.55,.45,.62],[1,.70,.28],[1,.97,.88]];const x=v*3,i=Math.min(2,Math.floor(x)),f=x-i;return s[i].map((c,k)=>c+(s[i+1][k]-c)*f)}
+const pretty=id=>id==='JUP_APP'?'Jupiter approach':id==='ORB00_IO'?'Orbit 00, Io pass day':id==='ORB00_JCA'?'Orbit 00, after closest approach':id.replace('ORB','Orbit ');
+const shortId=id=>id==='JUP_APP'?'A':id==='ORB00_IO'?'0·':id==='ORB00_JCA'?'CA':id.replace('ORB','');
+const MN=k=>MBY[k].name;
+function flyLabel(f){return `${f.id} · ${MN(f.moon)} · ${fmtD(f.tca_ms)}`}
+
+/* ---------- renderer ---------- */
+const cv=$('#gl'); let R_;
+try{R_=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:false});}catch(e){$('#gate').style.display='flex';}
+if(!R_){return}
+R_.setPixelRatio(Math.min(window.devicePixelRatio||1,2)); R_.setClearColor(0x06080e,1);
+let sprites=[];
+function sizeSprite(o){const h=cv.clientHeight||600;const s=o.px/h*2*Math.tan(o.cam.fov*RAD/2);o.s.scale.set(s*o.asp,s,1)}
+function mkDot(color,px,cam,ring){const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');
+  const col=hex(color);const gr=g.createRadialGradient(32,32,2,32,32,30);gr.addColorStop(0,col);gr.addColorStop(.45,col);gr.addColorStop(1,'rgba(0,0,0,0)');
+  g.fillStyle=gr;g.beginPath();g.arc(32,32,30,0,TAU);g.fill();
+  if(ring){g.strokeStyle='#fff';g.lineWidth=3;g.beginPath();g.arc(32,32,19,0,TAU);g.stroke()}
+  const t=new THREE.CanvasTexture(c);const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,sizeAttenuation:false,depthTest:false,transparent:true}));
+  const o={s,px,cam,asp:1};sprites.push(o);s.renderOrder=10;sizeSprite(o);return s}
+function mkLabel(text,color,px,cam,anchor,pri){const c=document.createElement('canvas');const g=c.getContext('2d');const fs=34;
+  g.font=`500 ${fs}px "IBM Plex Sans Condensed",system-ui,sans-serif`;const w=Math.ceil(g.measureText(text).width)+16;c.width=w;c.height=fs+14;
+  g.font=`500 ${fs}px "IBM Plex Sans Condensed",system-ui,sans-serif`;g.textBaseline='middle';g.fillStyle='rgba(6,8,14,.55)';g.fillRect(0,0,w,c.height);
+  g.fillStyle=color;g.fillText(text,8,c.height/2+1);
+  const t=new THREE.CanvasTexture(c);const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,sizeAttenuation:false,depthTest:false,transparent:true}));
+  s.center.set(anchor===undefined?0:anchor,.5);const o={s,px:px*1.5,cam,asp:w/c.height,lab:true,col:color,pri:pri||3,dyS:0};sprites.push(o);s.renderOrder=11;sizeSprite(o);return s}
+function attached(o,root){while(o.parent)o=o.parent;return o===root}
+function disposeTree(g){g.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){if(o.material.map)o.material.map.dispose();o.material.dispose()}});g.clear()}
+const LEAD=document.createElement('canvas');LEAD.id='lead';$('#stage').insertBefore(LEAD,$('#hud'));
+let LBL=[];const _pv=new THREE.Vector3();
+function visChain(o){for(;o;o=o.parent)if(o.visible===false)return false;return true}
+/* Labels keep their horizontal position; where two would overlap on screen, the lower-priority one is
+   moved vertically (up or down, whichever is shorter) and joined to its anchor by a thin line. */
+function layoutLabels(){const st=$('#stage'),W=st.clientWidth,H=st.clientHeight;if(!W||!H)return;
+  const scene=S.mode==='A'?sA:sB,cam=S.mode==='A'?camA:camB,dpr=Math.min(devicePixelRatio||1,2);
+  if(LEAD.width!==Math.round(W*dpr)||LEAD.height!==Math.round(H*dpr)){LEAD.width=Math.round(W*dpr);LEAD.height=Math.round(H*dpr)}
+  const g=LEAD.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,W,H);
+  scene.updateMatrixWorld();cam.updateMatrixWorld();
+  const L=[];
+  for(const o of sprites){if(!o.lab||o.cam!==cam||!visChain(o.s)||!attached(o.s,scene))continue;
+    _pv.setFromMatrixPosition(o.s.matrixWorld).project(cam);if(_pv.z>1||_pv.z<-1)continue;
+    const hp=o.px*.9,wp=o.px*o.asp,sx=(_pv.x*.5+.5)*W,sy=(-_pv.y*.5+.5)*H,ax=o.s.center.x;let x0=sx-ax*wp;
+    if(x0>W||x0+wp<0||sy<-hp||sy>H+hp)continue;
+    let dx=0;if(x0<4)dx=4-x0;else if(x0+wp>W-4)dx=W-4-(x0+wp);
+    if(wp<W-8){o.s.center.x=ax-dx/wp;x0+=dx}
+    L.push({o,sx,sy,x0,x1:x0+wp,hp,pri:o.pri,dy:0,ax})}
+  L.sort((a,b)=>a.pri-b.pri||a.sy-b.sy);
+  const placed=[];
+  { const hd=$('#hud');if(hd&&hd.offsetWidth){placed.push({x0:hd.offsetLeft-2,x1:hd.offsetLeft+hd.offsetWidth+2,y0:hd.offsetTop-2,y1:hd.offsetTop+hd.offsetHeight+2,l:null})} }
+  const clash=(l,dy)=>{const y0=l.sy+dy-l.hp/2,y1=y0+l.hp;for(const p of placed)if(l.x0<p.x1+2&&l.x1+2>p.x0&&y0<p.y1+1&&y1>p.y0-1)return p;return null};
+  for(const l of L){let dn=0,up=0;
+    for(let k=0;k<24;k++){const p=clash(l,dn);if(!p)break;dn=p.y1+2-(l.sy-l.hp/2)}
+    for(let k=0;k<24;k++){const p=clash(l,up);if(!p)break;up=p.y0-2-(l.sy+l.hp/2)}
+    const okDn=l.sy+dn+l.hp/2<=H-4,okUp=l.sy+up-l.hp/2>=4;
+    l.dy=(okDn&&okUp)?(Math.abs(dn)<=Math.abs(up)?dn:up):okDn?dn:okUp?up:0;
+    l.hide=l.pri>=4&&Math.abs(l.dy)>20;
+    if(l.hide){l.dy=0;continue}
+    const y0=l.sy+l.dy-l.hp/2;placed.push({x0:l.x0,x1:l.x1,y0,y1:y0+l.hp,l})}
+  for(const l of L){const o=l.o;o.s.material.opacity=l.hide?0:1;if(l.hide){o.dyS=0;o.s.center.y=.5;continue}o.dyS+=(l.dy-o.dyS)*.35;if(Math.abs(l.dy-o.dyS)<.25)o.dyS=l.dy;
+    o.s.center.y=.5+o.dyS/o.px;l.dyS=o.dyS;
+    if(Math.abs(o.dyS)>4){g.strokeStyle=o.col;g.globalAlpha=.55;g.lineWidth=1;g.beginPath();
+      const ex=Math.min(Math.max(l.sx,l.x0),l.x1),ey=l.sy+o.dyS+(o.dyS>0?-l.hp/2:l.hp/2);g.moveTo(l.sx,l.sy);g.lineTo(ex,ey);g.stroke();g.globalAlpha=1}}
+  for(const o of sprites)if(o.lab&&!L.some(l=>l.o===o)){if(o.dyS){o.dyS=0;o.s.center.y=.5}o.s.material.opacity=1}
+  LBL=L}
+function pruneSprites(){sprites=sprites.filter(o=>attached(o.s,sA)||attached(o.s,sB))}
+function circle(r,seg=240){const p=[];for(let k=0;k<=seg;k++){const a=k/seg*TAU;p.push(new THREE.Vector3(r*Math.cos(a),r*Math.sin(a),0))}return new THREE.BufferGeometry().setFromPoints(p)}
+
+/* =========================================================
+   SCENE A: Jupiter system, Sun-fixed frame (X sunward, Z north)
+   ========================================================= */
+const sA=new THREE.Scene(), camA=new THREE.PerspectiveCamera(45,1,.05,6000);
+camA.up.set(0,0,1);
+const ctlA=new THREE.OrbitControls(camA,cv); ctlA.enableDamping=true; ctlA.dampingFactor=.08; ctlA.minDistance=1.6; ctlA.maxDistance=1500;
+sA.add(new THREE.AmbientLight(0xffffff,.42));
+const sunL=new THREE.DirectionalLight(0xfff2dd,1.15); sunL.position.set(300,0,0); sA.add(sunL);
+const jg=new THREE.Group(); sA.add(jg);
+function planetTexture(){const w=1024,h=512,c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');let sd=7;const rnd=()=>(sd=(sd*16807)%2147483647)/2147483647;
+  for(let y=0;y<h;y++){const lat=(.5-y/h)*Math.PI;const v=Math.sin(lat*11)+.6*Math.sin(lat*23+1.3)+.35*Math.sin(lat*47+.4);const t=(v+1.95)/3.9;
+    g.fillStyle=`rgb(${Math.round(118+107*t)},${Math.round(76+120*t)},${Math.round(50+98*t)})`;g.fillRect(0,y,w,1)}
+  g.globalAlpha=.11;for(let i=0;i<320;i++){const x=rnd()*w,y=rnd()*h,rx=8+rnd()*54,ry=1.5+rnd()*5.5;g.fillStyle=rnd()<.5?'#fff0d8':'#5a3420';g.beginPath();g.ellipse(x,y,rx,ry,0,0,TAU);g.fill()}
+  const t=new THREE.CanvasTexture(c);t.anisotropy=4;return t}
+const planetGeo=new THREE.SphereGeometry(1,72,54); planetGeo.rotateX(Math.PI/2);
+const planet=new THREE.Mesh(planetGeo,new THREE.MeshLambertMaterial({map:planetTexture()})); jg.add(planet);
+const grat=new THREE.Group(); jg.add(grat);
+(function(){const m=new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.16});
+  for(let la=-60;la<=60;la+=30){const pts=[];for(let k=0;k<=96;k++){const a=k/96*TAU;pts.push(new THREE.Vector3(1.004*Math.cos(la*RAD)*Math.cos(a),1.004*Math.cos(la*RAD)*Math.sin(a),1.004*Math.sin(la*RAD)))}grat.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),m))}
+  for(let lo=0;lo<360;lo+=30){const pts=[];for(let k=0;k<=48;k++){const la=(k/48-.5)*Math.PI;pts.push(new THREE.Vector3(1.004*Math.cos(la)*Math.cos(lo*RAD),1.004*Math.cos(la)*Math.sin(lo*RAD),1.004*Math.sin(la)))}
+    grat.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),lo===0?new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.7}):m))}
+  grat.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(1,0,0),new THREE.Vector3(4,0,0)]),new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.55})));
+  const l0=mkLabel('System III 0°','#e4e8f2',11,camA);l0.position.set(4.2,0,0);grat.add(l0)})();
+/* illustration: tilted dipole shape (planet-fixed) */
+const dipA=new THREE.Group(); jg.add(dipA);
+(function(){const th=9.6*RAD, le=(360-202)*RAD, ax=new THREE.Vector3(Math.sin(th)*Math.cos(le),Math.sin(th)*Math.sin(le),Math.cos(th));
+  const inner=new THREE.Group();const lm=new THREE.LineBasicMaterial({color:COL.lit,transparent:true,opacity:.45});
+  [4,8,14].forEach(L=>{const cmax=Math.acos(Math.sqrt(1/L));for(let q=0;q<12;q++){const ph=q/12*TAU,p=[];for(let k=0;k<=48;k++){const la=-cmax+2*cmax*k/48,r=L*Math.cos(la)**2;p.push(new THREE.Vector3(r*Math.cos(la)*Math.cos(ph),r*Math.cos(la)*Math.sin(ph),r*Math.sin(la)))}
+    inner.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(p),lm))}});
+  inner.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),ax);dipA.add(inner);
+  const l=mkLabel('dipole shape, illustration only','#b9a3ff',10.5,camA);l.position.copy(ax.clone().multiplyScalar(15));dipA.add(l)})();
+const fixA=new THREE.Group(); sA.add(fixA);
+const ringsG=new THREE.Group(); fixA.add(ringsG);
+function buildRings(rmax){disposeTree(ringsG);const cand=[10,20,50,100,150,200,300,500];let top=cand.find(r=>r>=rmax*1.02)||500;const use=cand.filter(r=>r<=top);
+  use.forEach(r=>{ringsG.add(new THREE.Line(circle(r),new THREE.LineBasicMaterial({color:0x4f77b8,transparent:true,opacity:r%50===0?.34:.16})));
+    const l=mkLabel(r+(r===use[use.length-1]?' Rj':''),'#9aa4bd',10.5,camA,undefined,4);l.position.set(r*.5,r*.866,0);ringsG.add(l)});
+  const q=top;[[1,0,'Noon · LT 12'],[0,1,'Dusk · LT 18'],[-1,0,'Midnight · LT 0'],[0,-1,'Dawn · LT 6']].forEach(([x,y,t])=>{const l=mkLabel(t,'#c8d0e6',11,camA,.5);l.position.set(x*q*1.12,y*q*1.12,0);ringsG.add(l);
+    ringsG.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x*q,y*q,0),new THREE.Vector3(x*q*1.06,y*q*1.06,0)]),new THREE.LineBasicMaterial({color:0x6f95d6})))});
+  ringsG.add(new THREE.ArrowHelper(new THREE.Vector3(1,0,0),new THREE.Vector3(q*1.14,0,0),q*.12,0xffd36b,q*.03,q*.016));
+  const l=mkLabel('to the Sun','#ffd36b',11,camA);l.position.set(q*1.28,0,q*.02);ringsG.add(l)}
+const moonG=new THREE.Group(); fixA.add(moonG);
+const moonObj={};
+MK.forEach(k=>{const m=MBY[k],c=MCOL[k];moonG.add(new THREE.Line(circle(m.R,200),new THREE.LineBasicMaterial({color:c,transparent:true,opacity:.45})));
+  const d=mkDot(c,8,camA),l=mkLabel(m.name,hex(c),10.5,camA,undefined,2);moonG.add(d,l);moonObj[k]={d,l}});
+const mLine=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3(1,0,0)]),new THREE.LineBasicMaterial({color:COL.lit,transparent:true,opacity:.8,depthTest:false}));sA.add(mLine);
+const trackG=new THREE.Group(); sA.add(trackG);
+const traceG=new THREE.Group(); sA.add(traceG);
+const probe=mkDot(COL.meas,16,camA,true); sA.add(probe);
+const probeG=mkDot(0xb4bccd,16,camA,true); probeG.visible=false; sA.add(probeG);
+const bArrow=new THREE.ArrowHelper(new THREE.Vector3(0,0,1),new THREE.Vector3(),5,COL.meas,1.4,.8); sA.add(bArrow);
+bArrow.line.material.depthTest=false; bArrow.cone.material.depthTest=false; bArrow.renderOrder=12;
+let SD=null, SG=null, past=null, trkLine=null, trkCnt=null, trkColorAttr=null, SL={};   // current segment data / meta / past points
+const flyMarkers=new THREE.Group(); sA.add(flyMarkers);
+
+/* =========================================================
+   SCENE B: moon-centred PHIO frame (moon radii): x corotation, y toward Jupiter, z north
+   ========================================================= */
+const sB=new THREE.Scene(), camB=new THREE.PerspectiveCamera(45,1,.01,3000); camB.up.set(0,0,1);
+const ctlB=new THREE.OrbitControls(camB,cv); ctlB.enableDamping=true; ctlB.dampingFactor=.08; ctlB.minDistance=1.3; ctlB.maxDistance=3000; ctlB.enabled=false;
+sB.add(new THREE.AmbientLight(0xffffff,.85));
+const sunB=new THREE.DirectionalLight(0xfff2dd,.9); sunB.position.set(-30,10,20); sB.add(sunB);
+const BASEC={IO:'#c9b46a',EUROPA:'#d9d2c4',GANYMEDE:'#8c8479',CALLISTO:'#5e5750',AMALTHEA:'#9a5a3c'};
+function moonTex(key){const w=512,h=256,c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.fillStyle=BASEC[key];g.fillRect(0,0,w,h);let sd=11;const rnd=()=>(sd=(sd*16807)%2147483647)/2147483647;
+  g.globalAlpha=.16;for(let i=0;i<260;i++){g.fillStyle=rnd()<.55?'#2a2724':'#e8e2d6';g.beginPath();g.ellipse(rnd()*w,rnd()*h,6+rnd()*34,4+rnd()*20,rnd()*3,0,TAU);g.fill()}return new THREE.CanvasTexture(c)}
+const mGeo=new THREE.SphereGeometry(1,64,48); mGeo.rotateX(Math.PI/2);
+const moonMesh=new THREE.Mesh(mGeo,new THREE.MeshLambertMaterial({map:moonTex('GANYMEDE')})); sB.add(moonMesh);
+const gratB=new THREE.Group();sB.add(gratB);
+(function(){const m=new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.14});
+  for(let la=-60;la<=60;la+=30){const p=[];for(let k=0;k<=96;k++){const a=k/96*TAU;p.push(new THREE.Vector3(1.004*Math.cos(la*RAD)*Math.cos(a),1.004*Math.cos(la*RAD)*Math.sin(a),1.004*Math.sin(la*RAD)))}gratB.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(p),m))}
+  for(let lo=0;lo<360;lo+=30){const p=[];for(let k=0;k<=48;k++){const la=(k/48-.5)*Math.PI;p.push(new THREE.Vector3(1.004*Math.cos(la)*Math.cos(lo*RAD),1.004*Math.cos(la)*Math.sin(lo*RAD),1.004*Math.sin(la)))}gratB.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(p),m))}})();
+const axesB=new THREE.Group(); sB.add(axesB);
+const dipB=new THREE.Group(); sB.add(dipB);
+(function(){const lm=new THREE.LineBasicMaterial({color:COL.lit,transparent:true,opacity:.5});
+  [1.25,1.45,1.7].forEach(L=>{const cmax=Math.acos(Math.sqrt(1/L));for(let q=0;q<16;q++){const ph=q/16*TAU,p=[];for(let k=0;k<=40;k++){const la=-cmax+2*cmax*k/40,r=L*Math.cos(la)**2;p.push(new THREE.Vector3(r*Math.cos(la)*Math.cos(ph),r*Math.cos(la)*Math.sin(ph),r*Math.sin(la)))}
+    dipB.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(p),lm))}})})();
+const pathB=new THREE.Group(), vecG=new THREE.Group(), markB=new THREE.Group(); sB.add(pathB,vecG,markB);
+const probeB=mkDot(COL.meas,16,camB,true); sB.add(probeB);
+const bArrowB=new THREE.ArrowHelper(new THREE.Vector3(0,0,1),new THREE.Vector3(),1,COL.meas,.18,.1); sB.add(bArrowB);
+bArrowB.line.material.depthTest=false; bArrowB.cone.material.depthTest=false; bArrowB.renderOrder=12;
+let FD=null, FM=null, pastB=null, vecLines=null, vecTimes=[], bRange=[0,1], FL={}, colAttrB=null;
+
+/* ---------- state ---------- */
+const S={mode:'A',TA:0,TB:0,play:false,speed:{A:86400,B:60},tgtA:'jupiter',tgtB:'moon',colorBy:'br',layer:{},sel:[],lcol:{},tp:'strips',run:'all',view:'orbit',graphH:230,sideW:328,stageH:64,lay:'split',switching:false};
+$$('input[data-l]').forEach(el=>S.layer[el.dataset.l]=el.checked);
+const q=new URLSearchParams(location.hash.slice(1));
+let lastHashStr='';
+function setHash(){try{const tt=S.mode==='B'?S.TB:S.TA,hs='#'+(S.mode==='B'&&FM?'fly='+FM.id:'orb='+(SG?SG.id:''))+(Number.isFinite(tt)?'&t='+Math.round(tt):'')+(S.sel.length?'&ly='+S.sel.join(','):'')+(S.colorBy!=='br'?'&pc='+S.colorBy:'');if(hs!==lastHashStr){lastHashStr=hs;history.replaceState(null,'',hs)}}catch(e){}}
+
+/* ---------- segment loading (scene A) ---------- */
+function busy(on){$('#busy').style.display=on?'flex':'none'}
+async function loadSeg(id,keepT,auto){const s=SEGBY[id];if(!s)return;if(!auto)busy(true);
+  const d=await getSeg(s);SL=await getSegL(s);if(!auto)busy(false);SD=d;SG=s;
+  disposeTree(trackG);disposeTree(flyMarkers);
+  const n=d.ts.length,pos=new Float32Array(3*n);for(let i=0;i<n;i++){pos[3*i]=d.X[i];pos[3*i+1]=d.Y[i];pos[3*i+2]=d.Z[i]}
+  const seg=[];trkCnt=new Int32Array(n);for(let i=1;i<n;i++){if(d.ts[i]-d.ts[i-1]<=d.gap)seg.push(d.X[i-1],d.Y[i-1],d.Z[i-1],d.X[i],d.Y[i],d.Z[i]);trkCnt[i]=seg.length/3}
+  trkLine=null;
+  const col=new Float32Array(3*n);trkColorAttr=new THREE.BufferAttribute(col,3);recolorTrack();
+  const g2=new THREE.BufferGeometry();g2.setAttribute('position',new THREE.BufferAttribute(pos,3));g2.setAttribute('color',trkColorAttr);
+  past=new THREE.Points(g2,new THREE.PointsMaterial({size:3.4,sizeAttenuation:false,vertexColors:true}));trackG.add(past);
+  const mark=(i,txt,c)=>{const dd=mkDot(0xffffff,6,camA),l=mkLabel(txt,c||'#e4e8f2',10.5,camA,undefined,1);dd.position.set(d.X[i],d.Y[i],d.Z[i]);l.position.copy(dd.position);trackG.add(dd,l)};
+  mark(near(d.ts,s.tmin),'  closest to Jupiter '+s.rmin.toFixed(1)+' Rj');mark(near(d.ts,s.tmax),'  farthest '+s.rmax.toFixed(0)+' Rj');
+  FLYS.filter(f=>f.seg===id&&f.tca_off!=null).forEach(f=>{const i=near(d.ts,f.tca_off);if(Math.abs(d.ts[i]-f.tca_off)>1800)return;
+    const dd=mkDot(MCOL[f.moon],9,camA),l=mkLabel('  '+f.id,hex(MCOL[f.moon]),11.5,camA,undefined,1);dd.position.set(d.X[i],d.Y[i],d.Z[i]);l.position.copy(dd.position);flyMarkers.add(dd,l)});
+  buildRings(s.rmax);pruneSprites();
+  $('#sub').textContent=`${pretty(id)} · ${fmtD(s.t0ms)} to ${fmtD(s.t0ms+s.dspan*1000)} · ${s.n.toLocaleString('en-US')} points`;
+  fillSegUI();
+  if(auto){S.TA=clamp(keepT||0,0,s.span);camA.far=Math.max(camA.far,s.rmax*30);camA.updateProjectionMatrix()}
+  else{S.TA=keepT!=null?clamp(keepT,0,s.span):0;S.speed.A=s.span>5*86400?86400:3600;fillSpeed();{const i0=near(d.ts,S.TA);fitA(false,Math.hypot(d.X[i0],d.Y[i0],d.Z[i0]))}}
+  updateHist();setHash();applyLayers();
+  if(auto){if(S.view==='orbit')drawTimeline()}else resize()}
+function ptRGB(d,i,L,La){if(L)return La?layerRGB(La[i]):MISS;if(S.colorBy==='br'){const b=d.Br[i];if(b!==b)return MISS;return Math.abs(b)<.5?[.47,.38,.68]:(b>0?[1,.48,.35]:[.35,.66,1])}return ramp((Math.log10(Math.max(d.B[i],1))-.2)/(3.3-.2))}
+function recolorTrack(){if(!SD||!trkColorAttr)return;const d=SD,n=d.ts.length,c=trkColorAttr.array,L=LIDX[S.colorBy],La=L?SL[L.i]:null;
+  for(let i=0;i<n;i++){const rgb=ptRGB(d,i,L,La);c[3*i]=rgb[0];c[3*i+1]=rgb[1];c[3*i+2]=rgb[2]}
+  trkColorAttr.needsUpdate=true}
+
+/* ---------- history: every earlier orbit stays drawn and fades with age ---------- */
+const HIST={ready:false,loaded:0,PO:[],LO:[]};
+const histG=new THREE.Group();sA.add(histG);
+/* context for gaps: published mission accounts, not the data files */
+const GAPNOTES=[
+  {win:[Date.UTC(1997,11,20,17,48),Date.UTC(1998,2,28,12,43)],txt:'Context: solar conjunction reduced the capacity to transmit science data to Earth (published mission timeline, E13 entry; the entry describes that flyby only).'},
+  {anchor:Date.UTC(2002,0,17,13,41),txt:'Context: the spacecraft entered safe mode at 13:41 UTC on 2002-01-17, 28 minutes before closest approach to Io; instruments went to standby (published news report, 2002-01-17).'}];
+function gapNote(ms){const d=SD,T=S.TA;let lo=SG.t0ms,hi=SG.t0ms+SG.span*1000;
+  if(d.ts.length){const j=bis(d.ts,T);if(T>=d.ts[j]&&T<=d.ts[Math.min(d.ts.length-1,j+1)]){lo=SG.t0ms+d.ts[j]*1000;hi=SG.t0ms+d.ts[Math.min(d.ts.length-1,j+1)]*1000}else if(T>d.ts[d.ts.length-1]){lo=SG.t0ms+d.ts[d.ts.length-1]*1000}}
+  for(const g of GAPNOTES){if(g.win&&ms>=g.win[0]&&ms<=g.win[1])return g.txt;if(g.anchor&&g.anchor>=lo&&g.anchor<=hi)return g.txt}return ''}
+/* ---- trajectory: the PDS trajectory files, decimated; drawn as a light-grey trace up to the current time ---- */
+const TJ={n:0,t:null,x:null,y:null,z:null,t0:0,pend:null,pseg:null,geo:null,line:null,head:null,cur:-2};
+const TJHOLE=7200;
+const gf=k=>k<=0?.85:fade(k);
+async function buildTrace(){const tj=P.traj;if(!tj)return;const buf=await inflate(tj.b),n=tj.n;
+  const ti=new Int32Array(buf.slice(0,4*n));TJ.n=n;TJ.t0=tj.t0ms/1000;TJ.t=Float64Array.from(ti);
+  TJ.x=new Float32Array(buf.slice(4*n,8*n));TJ.y=new Float32Array(buf.slice(8*n,12*n));TJ.z=new Float32Array(buf.slice(12*n,16*n));
+  const starts=SEGS.map(s=>s.t0ms/1000-TJ.t0),pos=[],pseg=[],pend=new Int32Array(n);let si=0,np=0;
+  for(let i=0;i<n-1;i++){while(si+1<starts.length&&starts[si+1]<=TJ.t[i])si++;
+    const dt=TJ.t[i+1]-TJ.t[i];
+    if(dt<=TJHOLE){const S=(dt<=600&&Math.hypot(TJ.x[i],TJ.y[i],TJ.z[i])<20)?3:1;let p0=[TJ.x[i],TJ.y[i],TJ.z[i]];
+      for(let q=1;q<=S;q++){const p1=q===S?[TJ.x[i+1],TJ.y[i+1],TJ.z[i+1]]:hermPt(i,i+1,q/S);pos.push(p0[0],p0[1],p0[2],p1[0],p1[1],p1[2]);pseg.push(si);np++;p0=p1}}
+    pend[i+1]=np}
+  TJ.pend=pend;TJ.pseg=Uint16Array.from(pseg);
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('color',new THREE.BufferAttribute(new Float32Array(pos.length),3));
+  TJ.geo=g;TJ.line=new THREE.LineSegments(g,new THREE.LineBasicMaterial({vertexColors:true}));TJ.line.frustumCulled=false;traceG.add(TJ.line);
+  const hg=new THREE.BufferGeometry();hg.setAttribute('position',new THREE.BufferAttribute(new Float32Array(18),3));
+  TJ.head=new THREE.Line(hg,new THREE.LineBasicMaterial({color:0xdadfe8}));TJ.head.frustumCulled=false;TJ.head.visible=false;traceG.add(TJ.head)}
+function hermPt(a,b,f){const t=TJ.t,h=t[b]-t[a],X=[TJ.x,TJ.y,TJ.z],o=[0,0,0];
+  if(h>1800){for(let c=0;c<3;c++)o[c]=X[c][a]+(X[c][b]-X[c][a])*f;return o}
+  const pa=a>0&&t[a]-t[a-1]<=TJHOLE?a-1:a,nb=b<TJ.n-1&&t[b+1]-t[b]<=TJHOLE?b+1:b;
+  const s2=f*f,s3=s2*f,h00=2*s3-3*s2+1,h10=s3-2*s2+f,h01=-2*s3+3*s2,h11=s3-s2;
+  for(let c=0;c<3;c++){const P=X[c],ma=(P[b]-P[pa])/((t[b]-t[pa])||1),mb=(P[nb]-P[a])/((t[nb]-t[a])||1);o[c]=h00*P[a]+h10*h*ma+h01*P[b]+h11*h*mb}
+  return o}
+function trajIdx(u){let lo=0,hi=TJ.n;while(lo<hi){const m=(lo+hi)>>1;if(TJ.t[m]<=u)lo=m+1;else hi=m}return lo}
+function trajAt(utc){if(!TJ.n)return null;const u=utc-TJ.t0,k=trajIdx(u);if(k<=0||k>=TJ.n)return null;const a=k-1,b=k,dt=TJ.t[b]-TJ.t[a];if(dt>TJHOLE)return null;const f=(u-TJ.t[a])/(dt||1);
+  return hermPt(a,b,f)}
+function recolorTrace(){if(!TJ.geo||!SG)return;const c=TJ.geo.attributes.color,a=c.array,cur=SG.idx,P_=TJ.pseg;
+  for(let p=0;p<P_.length;p++){const b=gf(cur-P_[p]),r=.80*b,g=.84*b,bl=.92*b,o=p*6;a[o]=a[o+3]=r;a[o+1]=a[o+4]=g;a[o+2]=a[o+5]=bl}
+  c.needsUpdate=true;TJ.cur=cur}
+function updateTrace(utc,x,y,z,hide){if(!TJ.geo)return;if(TJ.cur!==SG.idx)recolorTrace();
+  const k=trajIdx(utc-TJ.t0);TJ.geo.setDrawRange(0,2*(k>0?TJ.pend[k-1]:0));
+  const hd=TJ.head;if(!hide&&k>0&&k<TJ.n&&TJ.t[k]-TJ.t[k-1]<=TJHOLE){const p=hd.geometry.attributes.position;const dt=TJ.t[k]-TJ.t[k-1],fc=Math.min(1,Math.max(0,(utc-TJ.t0-TJ.t[k-1])/(dt||1)));for(let j=0;j<5;j++){const q=hermPt(k-1,k,fc*j/5);p.setXYZ(j,q[0],q[1],q[2])}p.setXYZ(5,x,y,z);p.needsUpdate=true;hd.material.color.setRGB(.80*gf(0),.84*gf(0),.92*gf(0));hd.visible=true}else hd.visible=false}
+const fade=k=>.12+.36*Math.pow(.93,k-1);
+function showStat(){const el=$('#hstat');if(HIST.ready){el.hidden=true;return}el.hidden=false;el.textContent=`Loading earlier orbits ${HIST.loaded}/${SEGS.length}`}
+async function loadAllSegs(){for(let i=0;i<SEGS.length;i++){await getSeg(SEGS[i]);await getSegL(SEGS[i]);HIST.loaded=i+1;showStat();await new Promise(r=>setTimeout(r,0))}
+  buildHist();HIST.ready=true;showStat();updateHist();drawTimeline()}
+function buildHist(){let np=0,nl=0;const PO=[],LO=[];
+  SEGS.forEach(s=>{const d=segCache[s.id];PO.push(np);LO.push(nl);np+=d.ts.length;let c=0;for(let i=1;i<d.ts.length;i++)if(d.ts[i]-d.ts[i-1]<=d.gap)c++;nl+=2*c});PO.push(np);LO.push(nl);
+  const HP=new Float32Array(3*np),LP=new Float32Array(3*nl),HC=new Float32Array(3*np),LC=new Float32Array(3*nl);
+  SEGS.forEach((s,k)=>{const d=segCache[s.id];let o=3*PO[k],l=3*LO[k];
+    for(let i=0;i<d.ts.length;i++){HP[o++]=d.X[i];HP[o++]=d.Y[i];HP[o++]=d.Z[i]}
+    for(let i=1;i<d.ts.length;i++)if(d.ts[i]-d.ts[i-1]<=d.gap){LP[l++]=d.X[i-1];LP[l++]=d.Y[i-1];LP[l++]=d.Z[i-1];LP[l++]=d.X[i];LP[l++]=d.Y[i];LP[l++]=d.Z[i]}});
+  const gp=new THREE.BufferGeometry();gp.setAttribute('position',new THREE.BufferAttribute(HP,3));gp.setAttribute('color',new THREE.BufferAttribute(HC,3));
+  const gl=new THREE.BufferGeometry();gl.setAttribute('position',new THREE.BufferAttribute(LP,3));gl.setAttribute('color',new THREE.BufferAttribute(LC,3));
+  histG.add(new THREE.LineSegments(gl,new THREE.LineBasicMaterial({vertexColors:true})),new THREE.Points(gp,new THREE.PointsMaterial({size:2.2,sizeAttenuation:false,vertexColors:true})));
+  Object.assign(HIST,{PO,LO,HC,LC,gp,gl})}
+function recolorHist(){if(!HIST.ready||!SG)return;const cur=SG.idx,L=LIDX[S.colorBy];
+  for(let k=0;k<cur;k++){const s=SEGS[k],d=segCache[s.id],sl=lsCache[s.id]||{},La=L?sl[L.i]:null,f=fade(cur-k),n=d.ts.length;let o=3*HIST.PO[k],l=3*HIST.LO[k];
+    for(let i=0;i<n;i++){const c=ptRGB(d,i,L,La);HIST.HC[o++]=c[0]*f;HIST.HC[o++]=c[1]*f;HIST.HC[o++]=c[2]*f}
+    for(let i=1;i<n;i++)if(d.ts[i]-d.ts[i-1]<=d.gap){const a=ptRGB(d,i-1,L,La),b=ptRGB(d,i,L,La),q=f*.7;
+      HIST.LC[l++]=a[0]*q;HIST.LC[l++]=a[1]*q;HIST.LC[l++]=a[2]*q;HIST.LC[l++]=b[0]*q;HIST.LC[l++]=b[1]*q;HIST.LC[l++]=b[2]*q}}
+  HIST.gp.attributes.color.needsUpdate=true;HIST.gl.attributes.color.needsUpdate=true}
+function updateHist(){if(!HIST.ready||!SG)return;const cur=SG.idx;HIST.gp.setDrawRange(0,HIST.PO[cur]);HIST.gl.setDrawRange(0,HIST.LO[cur]);recolorHist()}
+function fitA(full,r0){let dist=full?clamp(SG.rmax*1.7,28,1200):clamp(SG.rmax*.7,28,130);if(r0>0)dist=Math.max(dist,r0*3);ctlA.target.set(0,0,0);camA.position.set(-.38*dist,-.85*dist,.36*dist);ctlA.update();camA.far=Math.max(6000,SG.rmax*30);camA.updateProjectionMatrix()}
+function moonPos(k,T,out){const m=SD.moon[k],j=clamp(Math.floor(T/3600),0,m.az.length-2),f=clamp(T/3600-j,0,1);
+  const az=(m.az[j]+(m.az[j+1]-m.az[j])*f)*RAD,R=m.R[j]+(m.R[j+1]-m.R[j])*f,la=(m.lat[j]+(m.lat[j+1]-m.lat[j])*f)*RAD;
+  return out.set(R*Math.cos(la)*Math.cos(az),R*Math.cos(la)*Math.sin(az),R*Math.sin(la))}
+
+/* ---------- other-instrument values ---------- */
+function codeA(k,T){const a=SL[k];if(!a)return 0;const d=SD,i=near(d.ts,T);return Math.abs(d.ts[i]-T)>d.gap?0:a[i]}
+function codeB(k,T){const a=FL[k];if(!a)return 0;const info=LFLY[FM.id],j=Math.round((T-info.c0)/info.st);return(j<0||j>=info.nb)?0:a[j]}
+const codeAt=(k,T)=>S.mode==='A'?codeA(k,T):codeB(k,T);
+function recolorB(){if(!FD||!colAttrB)return;const d=FD,f=FM,n=f.np,c=colAttrB.array,L=LIDX[S.colorBy];
+  for(let i=0;i<n;i++){const rgb=L?layerRGB(codeB(L.i,d.tp[i])):(f.nf?ramp((lerp(d.tf,d.bm,d.tp[i])-bRange[0])/(bRange[1]-bRange[0])):[.55,.6,.72]);c[3*i]=rgb[0];c[3*i+1]=rgb[1];c[3*i+2]=rgb[2]}
+  colAttrB.needsUpdate=true}
+const GC={};
+function grpGlyph(g,T){const ls=LAYERS.filter(l=>l.grp===g&&SL[l.i]);if(!ls.length)return '∅';const key=SG.id+g;if(!(key in GC)){let c=0;const n=SD.ts.length;for(let i=0;i<n&&!c;i++)for(const l of ls)if(SL[l.i][i]>0){c=1;break}GC[key]=c}
+  if(!GC[key])return '∅';return ls.some(l=>codeA(l.i,T)>=1)?'●':'○'}
+function hudLayers(T){const ids=S.sel.slice();if(LIDX[S.colorBy]&&!ids.includes(S.colorBy))ids.push(S.colorBy);if(!ids.length)return '';
+  const rows=ids.map(id=>({id,l:LIDX[id],q:codeAt(LIDX[id].i,T)})),have=rows.filter(r=>r.q>=1).length,tall=$('#stage').clientHeight>=300,show=tall?rows.slice(0,4):[],more=rows.length-show.length;
+  const sq=rows.map(r=>{const c=S.lcol[r.id]||'#9aa4bd';return `<i class="sq" style="${r.q>=1?'background:'+c:'border:1px solid '+c}"></i>`}).join('');
+  return `<div class="hl"><div class="k">layers: ${rows.length} on, ${have} with a value here ${sq}</div>`+show.map(r=>`<div class="hlc"><i style="background:${S.lcol[r.id]||'#9aa4bd'}"></i><span class="k">${lname(r.l)}</span><b>${fmtL(r.l,r.q)}</b></div>`).join('')+(more>0&&tall?`<div class="k">+${more} more, see the graph</div>`:'')+'</div>'}
+let HUDMIN=false;try{HUDMIN=localStorage.getItem('galileoAtlasHud')==='1'}catch(_){}
+const setHudBtn=()=>{const b=$('#hudx');if(!b)return;b.textContent=HUDMIN?'▸':'▾';b.title=b.ariaLabel=(HUDMIN?'expand':'collapse')+' readout'};
+function covText(){const n=SD.ts.length,out=[];
+  ['EPD','PLS','PWS','HIC'].forEach(g=>{const arrs=LAYERS.filter(l=>l.grp===g&&SL[l.i]).map(l=>SL[l.i]);if(!arrs.length)return;let c=0;for(let i=0;i<n;i++){for(const a of arrs)if(a[i]>0){c++;break}}out.push(g+' '+Math.round(100*c/n)+'%')});
+  return out.length?out.join(' · ')+' of points':(LSEG[SG.id]==null?'not included for this segment':'none in this segment')}
+function covFly(){const info=LFLY[FM.id],out=[];if(!info)return 'none in this window';
+  ['EPD','PLS','PWS','HIC'].forEach(g=>{const arrs=LAYERS.filter(l=>l.grp===g&&FL[l.i]).map(l=>FL[l.i]);if(!arrs.length)return;let c=0;for(let i=0;i<info.nb;i++){for(const a of arrs)if(a[i]>0){c++;break}}out.push(g+' '+Math.round(100*c/info.nb)+'%')});
+  return out.length?out.join(' · ')+' of the window':'none in this window'}
+
+/* ---------- flyby loading (scene B) ---------- */
+async function loadFly(id){const f=FLYBY[id];if(!f)return;busy(true);const d=await getFly(f);FL=await getFlyL(f);busy(false);FD=d;FM=f;
+  disposeTree(pathB);disposeTree(vecG);disposeTree(markB);disposeTree(axesB);
+  moonMesh.material.map.dispose();moonMesh.material.map=moonTex(f.moon);moonMesh.material.needsUpdate=true;
+  const n=f.np,pos=new Float32Array(3*n);for(let i=0;i<n;i++){pos[3*i]=d.x[i];pos[3*i+1]=d.y[i];pos[3*i+2]=d.z[i]}
+  const srt=Array.from(d.bm).sort((a,b)=>a-b);const pc=p=>srt.length?srt[Math.min(srt.length-1,Math.floor(p*srt.length))]:0;
+  bRange=f.nf?[pc(.02),Math.max(pc(.98),pc(.02)+1)]:[0,1];const p90=pc(.9)||1;
+  const col=new Float32Array(3*n);
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  pathB.add(new THREE.Line(g,new THREE.LineBasicMaterial({color:0x8793b8,transparent:true,opacity:.3})));
+  const g2=new THREE.BufferGeometry();g2.setAttribute('position',new THREE.BufferAttribute(pos,3));g2.setAttribute('color',colAttrB=new THREE.BufferAttribute(col,3));
+  pastB=new THREE.Points(g2,new THREE.PointsMaterial({size:4,sizeAttenuation:false,vertexColors:true}));pathB.add(pastB);recolorB();
+  /* vectors */
+  vecTimes=[];const vk=.4/p90,stride=Math.max(1,Math.ceil(f.nf/90)),p=[],c=[];
+  for(let i=0;i<f.nf;i+=stride){const t=d.tf[i];if(t<d.tp[0]||t>d.tp[n-1])continue;const x=lerp(d.tp,d.x,t),y=lerp(d.tp,d.y,t),z=lerp(d.tp,d.z,t),rgb=ramp((d.bm[i]-bRange[0])/(bRange[1]-bRange[0]));
+    p.push(x,y,z,x+d.bx[i]*vk,y+d.by[i]*vk,z+d.bz[i]*vk);c.push(...rgb,...rgb);vecTimes.push(t)}
+  const gv=new THREE.BufferGeometry();gv.setAttribute('position',new THREE.Float32BufferAttribute(p,3));gv.setAttribute('color',new THREE.Float32BufferAttribute(c,3));
+  vecLines=new THREE.LineSegments(gv,new THREE.LineBasicMaterial({vertexColors:true}));vecG.add(vecLines);f.vk=vk;
+  /* extent / axes */
+  let ext=1.5;for(const w of [120,240,480,900]){ext=1.5;for(let i=0;i<n;i++)if(Math.abs(d.tp[i])<=w)ext=Math.max(ext,Math.hypot(d.x[i],d.y[i],d.z[i]));if(ext>=6)break}f.ext=ext;
+  const L=clamp(ext*.55,2.2,60);
+  [[1,0,0,'flow →  x'],[0,1,0,'to Jupiter  y'],[0,0,1,'north  z']].forEach(([x,y,z,t])=>{axesB.add(new THREE.ArrowHelper(new THREE.Vector3(x,y,z),new THREE.Vector3(),L,0x5b6788,L*.07,L*.04));
+    const l=mkLabel(t,'#aab3cc',10.5,camB);l.position.set(x*L*1.08,y*L*1.08,z*L*1.08);axesB.add(l)});
+  const ic=near(d.tp,0);const dd=mkDot(0xffffff,6,camB);dd.position.set(d.x[ic],d.y[ic],d.z[ic]);const l=mkLabel('  closest approach','#ffd36b',10.5,camB,undefined,1);l.position.copy(dd.position);markB.add(dd,l);
+  pruneSprites();
+  $('#dipBlab').hidden=f.moon!=='GANYMEDE';
+  S.TB=0;S.speed.B=f.ext>30?300:60;fillSpeed();
+  fitB();fillFlyUI();$('#sub').textContent=`${f.id} · ${MN(f.moon)} pass · ${fmtMs(f.tca_ms)} UTC`;
+  resize();setHash();applyLayers()}
+function fitB(){const dist=clamp(FM.ext*2.3,3.6,400);ctlB.target.set(0,0,0);camB.position.set(-.95*dist,-.1*dist,.3*dist);ctlB.minDistance=1.25;camB.far=Math.max(3000,FM.ext*100);camB.updateProjectionMatrix();ctlB.update()}
+
+/* ---------- selectors / info cards ---------- */
+function fillSegUI(){const s=SG;$('#segSel').value=s.id;
+  const flyHere=FLYS.filter(f=>f.seg===s.id);
+  $('#segInfo').innerHTML=`<dt>Dates</dt><dd>${fmtD(s.t0ms)} to ${fmtD(s.t0ms+s.dspan*1000)}</dd>
+<dt>Points</dt><dd>${s.n.toLocaleString('en-US')} (from ${s.nraw.toLocaleString('en-US')} samples)</dd>
+<dt>Distance</dt><dd>${s.rmin.toFixed(1)} to ${s.rmax.toFixed(s.rmax<10?1:0)} Rj</dd>
+<dt>Local time at far end</dt><dd>${s.ltmax.toFixed(1)} h</dd>
+<dt>Other data</dt><dd>${covText()}</dd>`;
+  const r=$('#segFly');r.innerHTML='';
+  if(!flyHere.length)r.innerHTML='<span class="src">No moon pass has a survey point in this segment.</span>';
+  flyHere.forEach(f=>{const b=document.createElement('button');b.className='chip';b.innerHTML=`<span class="dot" style="background:${hex(MCOL[f.moon])}"></span>${f.id} ${MN(f.moon)}`;b.addEventListener('click',()=>openFly(f.id));r.appendChild(b)});
+  drawMission()}
+const RES_TXT={hi:f=>`High-resolution file, ${f.nf.toLocaleString('en-US')} points (3 s medians)`,survey:f=>`Survey file only, ${f.nf} samples (about ${f.cad?Math.round(f.cad)+' s':'?'} apart)`,none:f=>'No magnetometer samples within 40 minutes in the archive; path only'};
+function fillFlyUI(){const f=FM;$('#flySel').value=f.id;
+  const dist=f.alt>=0?f.alt.toLocaleString('en-US'):'—';
+  $('#flyInfo').innerHTML=`<dt>Time</dt><dd>${fmtMs(f.tca_ms)} UTC</dd>
+<dt>Orbit</dt><dd>${f.orb}${f.rmin>4?' (distant pass)':''}</dd>
+<dt>Altitude</dt><dd>${dist} km (${f.rmin.toFixed(2)} radii from centre)</dd>
+<dt>Over</dt><dd>${f1(f.lat)}° lat, ${f.elon.toFixed(0)}° E lon</dd>
+<dt>Data</dt><dd>${RES_TXT[f.res](f)}</dd>
+<dt>Field</dt><dd>${f.bmax!=null?`peak ${f.bmax.toFixed(0)} nT${f.bca!=null?`, ${f.bca.toFixed(0)} nT at closest approach`:''}`:'—'}</dd>
+<dt>Other data</dt><dd>${covFly()}</dd>`;
+  const m=MBY[f.moon],cnt=FLYS.filter(x=>x.moon===f.moon).length;
+  $('#moonInfo').innerHTML=`<dt>Moon</dt><dd>${m.name}</dd><dt>Mean radius</dt><dd>${m.rk.toLocaleString('en-US')} km</dd>
+<dt>Distance from Jupiter</dt><dd>${m.R.toFixed(1)} Rj</dd><dt>Orbital period</dt><dd>${(+m.P).toFixed(2)} days</dd><dt>Passes in the archive</dt><dd>${cnt}</dd>`;
+  drawMission()}
+function fillSegSel(){const sel=$('#segSel');sel.innerHTML='';SEGS.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=`${pretty(s.id)} · ${fmtD(s.t0ms)} to ${fmtD(s.t0ms+s.dspan*1000)}`;sel.appendChild(o)})}
+function fillFlySel(){const sel=$('#flySel');sel.innerHTML='';FLYS.forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=flyLabel(f)+(f.rmin>4?' (distant)':'');sel.appendChild(o)})}
+$('#segSel').addEventListener('change',e=>openSeg(e.target.value));
+$('#segPrev').addEventListener('click',()=>openSeg(SEGS[clamp(SG.idx-1,0,SEGS.length-1)].id));
+$('#segNext').addEventListener('click',()=>openSeg(SEGS[clamp(SG.idx+1,0,SEGS.length-1)].id));
+$('#flySel').addEventListener('change',e=>openFly(e.target.value));
+$('#flyPrev').addEventListener('click',()=>openFly(FLYS[clamp(FLYS.indexOf(FM)-1,0,FLYS.length-1)].id));
+$('#flyNext').addEventListener('click',()=>openFly(FLYS[clamp(FLYS.indexOf(FM)+1,0,FLYS.length-1)].id));
+$('#toJup').addEventListener('click',async()=>{const f=FM;if(f.seg){await openSeg(f.seg,f.tca_off)}else{setMode('A')}});
+async function openSeg(id,T){S.play=false;$('#play').textContent='Play';await loadSeg(id,T);setMode('A',true)}
+async function openFly(id){S.play=false;$('#play').textContent='Play';await loadFly(id);setMode('B',true)}
+
+/* ---------- UI wiring ---------- */
+const SPEEDS={A:[['10 min per second',600],['1 hour per second',3600],['6 hours per second',21600],['1 day per second',86400],['2 days per second',172800],['5 days per second',432000],['10 days per second',864000],['30 days per second',2592000]],
+              B:[['15 s per second',15],['1 min per second',60],['2 min per second',120],['5 min per second',300],['15 min per second',900]]};
+function fillSpeed(){const sel=$('#speed');sel.innerHTML='';const list=SPEEDS[S.mode];let best=list[0][1],bd=1e18;list.forEach(([n,v])=>{const dd=Math.abs(Math.log(v/S.speed[S.mode]));if(dd<bd){bd=dd;best=v}});S.speed[S.mode]=best;
+  list.forEach(([n,v])=>{const o=document.createElement('option');o.value=v;o.textContent=n;if(v===best)o.selected=true;sel.appendChild(o)})}
+$('#speed').addEventListener('change',e=>{S.speed[S.mode]=+e.target.value});
+const gT=()=>OFF[SG.idx]+S.TA;
+const range=()=>S.mode==='A'?(S.view==='mission'?[0,G]:[0,SG.span]):[FD.tp[0],FD.tp[FD.tp.length-1]];
+const curT=()=>S.mode==='A'?(S.view==='mission'?gT():S.TA):S.TB;
+function segAt(g){let i=0;while(i+1<OFF.length&&OFF[i+1]<=g)i++;return i}
+let seekPending=null;
+async function seekGlobal(g){g=clamp(g,0,G);const i=segAt(g),loc=clamp(g-OFF[i],0,SEGS[i].span);
+  if(i===SG.idx){S.TA=loc;return}
+  if(S.switching){seekPending=g;return}
+  S.switching=true;try{await loadSeg(SEGS[i].id,loc,true)}finally{S.switching=false}
+  if(seekPending!=null){const p=seekPending;seekPending=null;seekGlobal(p)}}
+function setT(t){if(S.mode==='A'){if(S.view==='mission')seekGlobal(t);else S.TA=clamp(t,0,SG.span)}else S.TB=clamp(t,FD.tp[0],FD.tp[FD.tp.length-1])}
+function stopPlay(){S.play=false;$('#play').textContent='Play'}
+function atEnd(){return S.mode==='A'?S.TA>=SG.span-1&&(S.run!=='all'||SG.idx===SEGS.length-1):S.TB>=FD.tp[FD.tp.length-1]-1}
+function advanceA(ds){if(S.switching)return;S.TA+=ds;if(S.TA<SG.span)return;
+  if(S.run==='all'&&SG.idx<SEGS.length-1){const nx=SEGS[SG.idx+1],carry=Math.min(S.TA-SG.span,nx.span-1);S.TA=SG.span;S.switching=true;
+    loadSeg(nx.id,carry,true).catch(()=>stopPlay()).finally(()=>{S.switching=false})}
+  else{S.TA=SG.span;stopPlay()}}
+$('#play').addEventListener('click',async()=>{
+  if(!S.play&&atEnd()){if(S.mode==='A'){if(S.run==='all'&&SG.idx!==0){S.switching=true;try{await loadSeg(SEGS[0].id,0,true)}finally{S.switching=false}}else S.TA=0}else S.TB=FD.tp[0]}
+  S.play=!S.play;$('#play').textContent=S.play?'Pause':'Play'});
+bindGroup('#runSel',b=>{S.run=b.dataset.r;$$('#runSel .chip').forEach(x=>x.setAttribute('aria-pressed',String(x===b)))});
+bindGroup('#viewSel',b=>{S.view=b.dataset.gv;$$('#viewSel .chip').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));drawTimeline();placeCursor()});
+$$('input[data-l]').forEach(el=>el.addEventListener('change',()=>{S.layer[el.dataset.l]=el.checked;applyLayers()}));
+function applyLayers(){const L=S.layer;histG.visible=L.hist!==false;planet.visible=L.planet;grat.visible=L.planet;trackG.visible=L.track;traceG.visible=L.trace!==false;bArrow.visible=L.bvec;moonG.visible=L.moons;mLine.visible=L.mline&&L.moons;
+  flyMarkers.visible=L.fl;ringsG.visible=L.rings;dipA.visible=L.dipA;pathB.visible=L.path;vecG.visible=L.vec;axesB.visible=L.axes;dipB.visible=L.dipB&&FM&&FM.moon==='GANYMEDE'}
+function bindGroup(id,fn){$(id).addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;fn(b)})}
+bindGroup('#tgtA',b=>{S.tgtA=b.dataset.t;$$('#tgtA .chip').forEach(x=>x.setAttribute('aria-pressed',String(x===b)))});
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+function setColorBy(v){S.colorBy=v;if($('#pcSel').value!==v)$('#pcSel').value=v;recolorTrack();recolorB();recolorHist();legend();drawTimeline();setHash()}
+function fillPC(){const sel=$('#pcSel'),cur=S.colorBy;let o='<optgroup label="Magnetometer">'+(S.mode==='A'?'<option value="br">Sign of Br</option>':'')+'<option value="b">Field strength |B|</option></optgroup>';
+  ['EPD','PLS','PWS','HIC','DDS'].forEach(g=>{o+=`<optgroup label="${GRPN[g]}">`+LAYERS.filter(l=>l.grp===g).map(l=>`<option value="${l.id}">${esc(lname(l))}</option>`).join('')+'</optgroup>'});
+  sel.innerHTML=o;sel.value=(cur==='br'&&S.mode==='B')?'b':cur}
+$('#pcSel').addEventListener('change',e=>setColorBy(e.target.value));
+function buildLayerUI(){const box=$('#lyGroups');box.innerHTML='';
+  ['EPD','PLS','PWS','HIC','DDS'].forEach(g=>{const ls=LAYERS.filter(l=>l.grp===g);if(!ls.length)return;const d=document.createElement('details');d.className='grp';d.dataset.g=g;
+    d.innerHTML=`<summary>${GRPN[g]}<span class="c" data-c="${g}"></span></summary>`+ls.map(l=>`<label class="lyr" title="${esc(l.desc+' · '+l.unit)}"><input type="checkbox" data-ly="${l.id}"><span class="sq" data-sq="${l.id}"></span><span class="nm">${esc(l.name)}<small>${esc(l.grp==='PWS'||l.grp==='HIC'?l.u:l.desc)}</small></span></label>`).join('');
+    box.appendChild(d)})}
+$('#lyGroups').addEventListener('change',e=>{const el=e.target.closest('input[data-ly]');if(el)toggleLayer(el.dataset.ly,el.checked)});
+const freeCol=()=>PAL.find(c=>!Object.values(S.lcol).includes(c))||PAL[0];
+function toggleLayer(id,on,silent){const el=document.querySelector(`input[data-ly="${id}"]`);
+  if(on){if(S.sel.includes(id))return;if(S.sel.length>=8){if(el)el.checked=false;$('#lyCount').textContent='Eight is the limit; clear one first.';return}S.sel.push(id);S.lcol[id]=freeCol()}
+  else{S.sel=S.sel.filter(x=>x!==id);delete S.lcol[id]}
+  if(el)el.checked=S.sel.includes(id);refreshLayerUI();if(!silent){drawTimeline();setHash()}}
+function refreshLayerUI(){$$('[data-sq]').forEach(s=>{const c=S.lcol[s.dataset.sq];s.style.background=c||'transparent';s.style.borderColor=c||'var(--line)'});
+  $('#lyCount').textContent=S.sel.length?`${S.sel.length} of 8 shown in the time panel.`:'Tick data types to add them to the time panel (up to 8).';
+  $$('summary .c').forEach(c=>{const k=S.sel.filter(id=>LIDX[id].grp===c.dataset.c).length;c.textContent=k?k+' shown':''})}
+$('#lyClear').addEventListener('click',()=>{S.sel.slice().forEach(id=>toggleLayer(id,false,true));drawTimeline();setHash()});
+bindGroup('#tpMode',b=>{if(!b.dataset.m)return;S.tp=b.dataset.m;$$('#tpMode .chip[data-m]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));drawTimeline()});
+bindGroup('#tgtB',b=>{const t=b.dataset.t;if(t==='fit'){S.tgtB='moon';$$('#tgtB .chip').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.t==='moon')));fitB();return}S.tgtB=t;$$('#tgtB .chip').forEach(x=>x.setAttribute('aria-pressed',String(x===b)))});
+$('#viewsA').addEventListener('click',e=>{const v=e.target.dataset.v;if(!v)return;if(v==='fit'){S.tgtA='jupiter';$$('#tgtA .chip').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.t==='jupiter')));fitA(true);return}
+  const dist=camA.position.distanceTo(ctlA.target);const dir={top:[0,.001,1],side:[.35,-1,.04],sun:[1,.001,.12]}[v];const d=new THREE.Vector3(...dir).normalize().multiplyScalar(dist);camA.position.copy(ctlA.target).add(d);ctlA.update()});
+function jump(j){const r=S.mode==='A'?{start:0,peri:SG.tmin,apo:SG.tmax,end:SG.span}:{b0:FD.tp[0],ca:0,peak:peakT(),b1:FD.tp[FD.tp.length-1]};if(j in r){if(S.mode==='A')S.TA=r[j];else setT(r[j]);stopPlay()}}
+function peakT(){if(!FM.nf)return 0;let k=0;for(let i=1;i<FM.nf;i++)if(FD.bm[i]>FD.bm[k])k=i;return FD.tf[k]}
+$$('[data-j]').forEach(b=>b.addEventListener('click',()=>jump(b.dataset.j)));
+function setMode(m,noLoad){S.mode=m;S.play=false;$('#play').textContent='Play';
+  $('#tabA').setAttribute('aria-selected',String(m==='A'));$('#tabB').setAttribute('aria-selected',String(m==='B'));
+  ['cSeg','cSegFly','layersA','camA','jumpsA','notesA'].forEach(i=>$('#'+i).hidden=m!=='A');['cFly','cMoon','layersB','camB','jumpsB','notesB'].forEach(i=>$('#'+i).hidden=m!=='B');
+  ctlA.enabled=m==='A';ctlB.enabled=m==='B';$('#runGrp').hidden=$('#viewGrp').hidden=m!=='A';$('#side').insertBefore($('#cData'),m==='A'?$('#layersA'):$('#layersB'));fillPC();fillSpeed();legend();applyLayers();
+  if(m==='A'&&SG)$('#sub').textContent=`${pretty(SG.id)} · ${fmtD(SG.t0ms)} to ${fmtD(SG.t0ms+SG.dspan*1000)} · ${SG.n.toLocaleString('en-US')} points`;
+  if(m==='B'&&FM)$('#sub').textContent=`${FM.id} · ${MN(FM.moon)} pass · ${fmtMs(FM.tca_ms)} UTC`;
+  drawTimeline();drawMission();setHash();resize()}
+$('#tabA').addEventListener('click',async()=>{if(!SG)await loadSeg(FM&&FM.seg?FM.seg:'ORB08');setMode('A')});
+$('#tabB').addEventListener('click',async()=>{if(!FM)await loadFly('G8');setMode('B')});
+function layerLegend(){const l=LIDX[S.colorBy];return `<span>${lname(l)}, log scale <span class="gradbar"></span>${numFmt(Math.pow(10,l.lo))} to ${numFmt(Math.pow(10,l.hi))} ${l.u}</span><span><i style="border-color:${rgbCss(ZERO)}"></i>0 or below range</span><span><i style="border-color:${rgbCss(MISS)}"></i>no data</span>`}
+function hudLines(){const hd=$('#hud'),c=$('#hudc');if(!hd||!c)return;let n=0,tg=null;
+  for(const sel of ['.hl','.pr','.ns','.bj','.mn']){if(hd.scrollHeight<=hd.clientHeight+1)break;const e=c.querySelector(sel);if(!e)continue;e.remove();n++;
+    if(!tg){const k=c.querySelector('.hh+.k');if(k){tg=document.createElement('span');tg.style.whiteSpace='nowrap';k.appendChild(tg)}}
+    if(tg){tg.textContent=' · +'+n+' more';tg.title=n+' line'+(n>1?'s':'')+' not shown: the panel is too short'}}
+}
+function hudFit(){const l=$('#legend'),hd=$('#hud');if(l&&hd)hd.style.setProperty('--legendH',(l.offsetHeight+10)+'px')}
+let LGOPEN=false;
+function legendFit(){const lg=$('#legend'),st=$('#stage');if(!lg)return;lg.classList.remove('cmp');
+  if(!mobileQ.matches&&(lg.offsetHeight>24||st.clientWidth<420))lg.classList.add('cmp');lg.classList.toggle('open',LGOPEN&&lg.classList.contains('cmp'));hudFit()}
+function legend(){legend0();legendFit()}
+$('#legend').addEventListener('click',e=>{if(!e.target.classList.contains('lgb'))return;LGOPEN=!LGOPEN;legendFit()});
+function legend0(){const li=S.mode==='A'
+  ?(LIDX[S.colorBy]?layerLegend():S.colorBy==='br'?'<span><i style="border-color:#ff7a59"></i>Br &gt; 0</span><span><i style="border-color:#5aa9ff"></i>Br &lt; 0</span><span><i style="border-color:#7861ad"></i>|Br| under 0.5 nT</span>'+(SG&&SG.novec?'<span><i style="border-color:'+rgbCss(MISS)+'"></i>Br not in this file</span>':''):'<span><i style="border-color:#4a6bd0"></i>weak (about 1.6 nT)</span><span><i style="border-color:#ffb347"></i>stronger</span><span><i style="border-color:#fff7e0"></i>about 2000 nT and up</span>')+'<span><i style="border-color:#b4bccd"></i><u class="ds"></u>trajectory position</span><span><i style="border-color:#ffb347"></i>measured field direction</span><span><i style="border-color:#b9a3ff"></i>moons and orbits</span><span><i style="border-top:2px solid;border-image:linear-gradient(90deg,#ff7a59,#5aa9ff) 1;opacity:.4"></i>earlier orbital paths</span>'
+  :(LIDX[S.colorBy]?layerLegend():FM&&FM.nf?`<span><i style="border-color:#4a6bd0"></i>${bRange[0].toFixed(0)} nT</span><span><i style="border-color:#ffb347"></i>stronger</span><span><i style="border-color:#fff7e0"></i>${bRange[1].toFixed(0)} nT</span><span>arrow length: 1 moon radius = ${FM.vk?(1/FM.vk).toFixed(0):'—'} nT</span>`:'<span>no field samples for this pass</span>');
+  $('#legend').innerHTML='<button class="lgb" type="button" aria-label="Show or hide the colour key">Key</button><div class="lgi">'+li+'</div>'}
+
+/* ---------- whole-mission strip ---------- */
+const mc=$('#mc'),mg=mc.getContext('2d');let slotGeom=[];
+function flySlot(f){if(f.seg)return SEGBY[f.seg].idx;let k=SEGS.findIndex(s=>s.t0ms>=f.tca_ms);return k<0?SEGS.length-1:k}
+function drawMission(){const dpr=Math.min(window.devicePixelRatio||1,2),W=mc.clientWidth,H=mc.clientHeight;if(!W)return;mc.width=W*dpr;mc.height=H*dpr;const g=mg;g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,W,H);
+  const K=SEGS.length,sw=(W-8)/K;g.font='10.5px "IBM Plex Sans Condensed",system-ui,sans-serif';g.textBaseline='middle';g.textAlign='center';slotGeom=[];
+  const step=sw>=20?1:(sw>=11?2:4);
+  SEGS.forEach((s,i)=>{const x=4+i*sw,sel=SG&&SG.id===s.id&&S.mode==='A';slotGeom.push([x,x+sw]);
+    const a=.14+.5*clamp(Math.log10(s.n)/4.5,0,1);g.fillStyle=`rgba(92,200,255,${a})`;g.fillRect(x+1,20,sw-2,16);
+    if(sel){g.strokeStyle='#fff';g.lineWidth=1.5;g.strokeRect(x+.5,19.5,sw-1,17)}
+    if(i%step===0){g.fillStyle=sel?'#fff':'#9aa4bd';g.fillText(shortId(s.id),x+sw/2,10)}});
+  const cnt={};FLYS.forEach(f=>{const i=flySlot(f);const j=cnt[i]=(cnt[i]||0);cnt[i]++;
+    const cx=4+i*sw+sw/2,cy=47+(j%2)*0+0;const x=cx+(j-0)*0;const px=4+i*sw+3+j*7;const sel=FM&&FM.id===f.id&&S.mode==='B';
+    g.fillStyle=hex(MCOL[f.moon]);g.globalAlpha=f.res==='none'?.55:1;g.beginPath();g.arc(Math.min(px+3,4+(i+1)*sw-3+j*0),cy+6,sel?4.5:3.2,0,TAU);g.fill();g.globalAlpha=1;
+    if(f.res==='none'){g.strokeStyle='#0a0c13';g.lineWidth=1.2;g.beginPath();g.arc(Math.min(px+3,4+(i+1)*sw-3),cy+6,1.3,0,TAU);g.stroke()}
+    if(sel){g.strokeStyle='#fff';g.lineWidth=1.4;g.beginPath();g.arc(Math.min(px+3,4+(i+1)*sw-3),cy+6,6.5,0,TAU);g.stroke()}
+    f._mx=Math.min(px+3,4+(i+1)*sw-3);f._my=cy+6});
+  g.textAlign='left';g.fillStyle='#6b7799';if(W>760)g.fillText('survey segments, equal widths (brighter = more points)',6,H-8);
+  g.textAlign='right';let x=W-6;[['AMALTHEA','Amalthea'],['CALLISTO','Callisto'],['GANYMEDE','Ganymede'],['EUROPA','Europa'],['IO','Io']].forEach(([k,n])=>{g.fillStyle='#9aa4bd';g.fillText(n,x,H-8);x-=g.measureText(n).width+5;g.fillStyle=hex(MCOL[k]);g.beginPath();g.arc(x-2,H-8,3,0,TAU);g.fill();x-=14});g.textAlign='left'}
+function missionHit(ex,ey){let best=null,bd=64;FLYS.forEach(f=>{if(f._mx==null)return;const d=(f._mx-ex)**2+(f._my-ey)**2;if(d<bd){bd=d;best=f}});if(best)return{fly:best};
+  const i=slotGeom.findIndex(([a,b])=>ex>=a&&ex<b);return i>=0?{seg:SEGS[i]}:null}
+mc.addEventListener('click',e=>{const r=mc.getBoundingClientRect(),h=missionHit(e.clientX-r.left,e.clientY-r.top);if(!h)return;if(h.fly)openFly(h.fly.id);else openSeg(h.seg.id)});
+const mtip=$('#mtip');
+mc.addEventListener('pointermove',e=>{const r=mc.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,h=missionHit(x,y);if(!h){mtip.style.display='none';return}
+  mtip.innerHTML=h.fly?`<b>${h.fly.id}</b> · ${MN(h.fly.moon)} · ${fmtD(h.fly.tca_ms)}<br><span class="k" style="color:#9aa4bd">${h.fly.alt.toLocaleString('en-US')} km altitude · ${h.fly.res==='hi'?'high-res field':h.fly.res==='survey'?'survey-rate field':'no field samples'}</span>`
+    :`<b>${pretty(h.seg.id)}</b><br><span style="color:#9aa4bd">${fmtD(h.seg.t0ms)} to ${fmtD(h.seg.t0ms+h.seg.dspan*1000)} · ${h.seg.n.toLocaleString('en-US')} points</span>`;
+  mtip.style.display='block';mtip.style.left=clamp(x+12,0,Math.max(0,r.width-310))+'px';mtip.style.top=(y>32?y-52:y+18)+'px'});
+mc.addEventListener('pointerleave',()=>mtip.style.display='none');
+
+/* ---------- time strips ---------- */
+const tl=$('#tl'), tg2=tl.getContext('2d'), ML=100;
+const mctx=document.createElement('canvas').getContext('2d'), LFONT='11px "IBM Plex Sans Condensed",system-ui,sans-serif', SFONT='10.5px "IBM Plex Sans Condensed",system-ui,sans-serif';
+const SEGC=si=>segCache[SEGS[si].id], SLC=si=>lsCache[SEGS[si].id]||{};
+function focusSpec(){const L=LIDX[S.colorBy];
+  if(L)return{kind:'layer',l:L,title:lname(L)+' · '+L.u+', log scale'};
+  if(S.colorBy==='br'&&S.mode==='A')return{kind:'br',title:'Br, radial field (System III file) · nT, signed log scale'};
+  return{kind:'b',title:'|B|, field strength · nT'+(S.mode==='A'?', log scale':'')}}
+function layerList(){const f=focusSpec();return S.sel.filter(id=>!(f.kind==='layer'&&f.l.id===id))}
+function legendRows(W,list){mctx.font=LFONT;let rows=1,x=0;list.forEach(id=>{const w=mctx.measureText(lname(LIDX[id])).width+24;if(x+w>W-ML&&x>0){rows++;x=0}x+=w});return rows}
+function layerBlockH(W){const L=layerList();if(!L.length)return 0;return S.tp==='strips'?10+L.length*12:6+62+8+legendRows(W,L)*14}
+function extraH(spec){return S.mode==='A'?(spec.kind==='layer'?22:11):(spec.kind==='layer'&&FM&&FM.nf?28:0)}
+const AXH=13;
+function timelineNeed(W){const spec=focusSpec();return 18+60+AXH+28+extraH(spec)+(S.mode==='A'?24:16)+layerBlockH(W)+6}
+function eachPix(w,mission,cb){const list=mission?SEGS.map((s,i)=>i):[SG.idx];
+  for(const si of list){const s=SEGS[si],d=SEGC(si);if(!d)continue;const T1=s.span,xa=mission?OFF[si]/G*w:0,xb=mission?(OFF[si]+T1)/G*w:w,N=d.ts.length;
+    const p0=Math.max(0,Math.floor(xa)),p1=Math.min(w-1,Math.ceil(xb)-1);
+    for(let px=p0;px<=p1;px++){const ta=Math.max(0,(px-xa)/(xb-xa)*T1),tb=Math.min(T1,(px+1-xa)/(xb-xa)*T1);if(tb<ta)continue;
+      let i=bis(d.ts,ta);while(i<N-1&&d.ts[i]<ta)i++;if(i<N&&d.ts[i]<ta)i++;let j=i;while(j<N&&d.ts[j]<=tb)j++;
+      if(j>i)cb(px,si,d,i,j);else{const m=(ta+tb)/2,k=near(d.ts,m);if(Math.abs(d.ts[k]-m)<=d.gap)cb(px,si,d,k,k+1)}}}}
+function agg(fn,w,mission){const mn=new Float32Array(w).fill(NaN),mx=new Float32Array(w).fill(NaN),av=new Float32Array(w).fill(NaN),cn=new Uint32Array(w);
+  eachPix(w,mission,(px,si,d,i0,i1)=>{const sl=SLC(si);let n=0,s0=0,lo=1e30,hi=-1e30;for(let i=i0;i<i1;i++){const v=fn(d,sl,i);if(v===v){n++;s0+=v;if(v<lo)lo=v;if(v>hi)hi=v}}
+    if(!n)return;if(cn[px]){av[px]=(av[px]*cn[px]+s0)/(cn[px]+n);mn[px]=Math.min(mn[px],lo);mx[px]=Math.max(mx[px],hi);cn[px]+=n}else{av[px]=s0/n;mn[px]=lo;mx[px]=hi;cn[px]=n}});
+  return{mn,mx,av}}
+function stripCodes(k,w,mission){const lev=new Float32Array(w),cnt=new Uint16Array(w),zero=new Uint8Array(w);
+  eachPix(w,mission,(px,si,d,i0,i1)=>{const a=SLC(si)[k];if(!a)return;for(let i=i0;i<i1;i++){const q=a[i];if(q>=2){lev[px]+=q;cnt[px]++}else if(q===1)zero[px]=1}});
+  const out=new Uint8Array(w);for(let px=0;px<w;px++)out[px]=cnt[px]?Math.round(lev[px]/cnt[px]):(zero[px]?1:0);return out}
+const fnLayer=k=>(d,sl,i)=>{const a=sl[k];if(!a)return NaN;const q=a[i];return q===0?NaN:(q===1?0:(q-2)/253)};
+const fnDist=(d,sl,i)=>Math.hypot(d.X[i],d.Y[i],d.Z[i]);
+function maxOver(mission,get){let mx=0;const list=mission?SEGS.map((s,i)=>i):[SG.idx];list.forEach(si=>{const d=SEGC(si);if(d){const a=get(d);for(let i=0;i<a.length;i++){const v=Math.abs(a[i]);if(v>mx)mx=v}}});return mx}
+function focusAxis(spec,mission){
+  if(spec.kind==='layer'){const l=spec.l,t=[];for(let dd=Math.ceil(l.lo-1e-9);dd<=Math.floor(l.hi+1e-9);dd++)t.push([(dd-l.lo)/(l.hi-l.lo),numFmt(Math.pow(10,dd))]);return{lo:0,hi:1,ticks:t}}
+  if(spec.kind==='b'){const hi=Math.max(3,Math.ceil(Math.log10(Math.max(1,maxOver(mission,d=>d.B)))*5)/5),t=[];for(let k=0;k<=Math.floor(hi);k++)t.push([k,String(Math.pow(10,k))]);return{lo:0,hi,ticks:t}}
+  const hi=Math.max(2,Math.ceil(Math.log10(1+maxOver(mission,d=>d.Br))*5)/5),t=[[0,'0']];[1,10,100,1000,10000].forEach(v=>{const s=Math.log10(1+v);if(s<=hi){t.push([s,'+'+v]);t.push([-s,'−'+v])}});return{lo:-hi,hi,ticks:t}}
+function drawFocus(g,x0,w,yT,hp,spec,ag,ax){const yb=yT+hp,Y=v=>yb-(v-ax.lo)/(ax.hi-ax.lo)*hp;
+  g.font=SFONT;g.textAlign='right';g.textBaseline='middle';g.lineWidth=1;
+  const lp=[];ax.ticks.forEach(([v,t])=>{const y=Y(v);g.strokeStyle=(spec.kind==='br'&&v===0)?'#5a6a96':'#1d2336';g.beginPath();g.moveTo(x0,y);g.lineTo(x0+w,y);g.stroke();lp.push([y,t,v===0?0:1])});
+  g.fillStyle='#6b7799';const taken=[];lp.sort((p,q)=>p[2]-q[2]).forEach(([y,t])=>{if(taken.every(u=>Math.abs(u-y)>=11)){taken.push(y);g.fillText(t,x0-6,y)}});
+  const col=spec.kind==='b'?'255,179,71':'92,200,255';
+  for(let px=0;px<w;px++){const a=ag.av[px];if(a!==a)continue;const y1=Y(ag.mx[px]),y2=Y(ag.mn[px]);
+    g.fillStyle=spec.kind==='br'?(a>=0?'rgba(255,122,89,.35)':'rgba(90,169,255,.35)'):`rgba(${col},.28)`;g.fillRect(x0+px,y1,1,Math.max(1,y2-y1))}
+  g.beginPath();let pen=false;for(let px=0;px<w;px++){const v=ag.av[px];if(v!==v){pen=false;continue}const y=Y(v);if(pen)g.lineTo(x0+px+.5,y);else g.moveTo(x0+px+.5,y);pen=true}
+  g.strokeStyle=spec.kind==='br'?'#e4e8f2':`rgb(${col})`;g.lineWidth=1.4;g.stroke();g.textAlign='left'}
+function drawLayerBlock(g,x0,w,W,y0,list,codesOf){if(!list.length)return;g.font=LFONT;g.textBaseline='middle';
+  const cols=list.map(id=>codesOf(LIDX[id]));
+  if(S.tp==='strips'){list.forEach((id,k)=>{const y=y0+8+k*12;g.fillStyle=S.lcol[id];g.fillRect(0,y-3,6,6);g.fillStyle='#c4cbde';g.textAlign='left';g.fillText(lname(LIDX[id]),10,y,ML-14);
+      g.fillStyle='#12172a';g.fillRect(x0,y-4,w,8);const c=cols[k];for(let px=0;px<w;px++){const q=c[px];if(!q)continue;g.fillStyle=q===1?rgbCss(ZERO):rgbCss(vir((q-2)/253));g.fillRect(x0+px,y-4,1.2,8)}})}
+  else{const top=y0+6,hh=62,yb=top+hh;g.strokeStyle='#262d42';g.lineWidth=1;[0,.25,.5,.75,1].forEach(f=>{g.beginPath();g.moveTo(x0,yb-f*hh);g.lineTo(x0+w,yb-f*hh);g.stroke()});
+    g.fillStyle='#6b7799';g.textAlign='left';g.fillText('top of range',0,top+4);g.fillText('floor',0,yb-3);
+    list.forEach((id,k)=>{const c=cols[k];g.beginPath();let pen=false;for(let px=0;px<w;px++){const q=c[px];if(!q){pen=false;continue}const v=q<2?0:(q-2)/253,x=x0+px+.5,y=yb-v*hh;if(pen)g.lineTo(x,y);else g.moveTo(x,y);pen=true}g.strokeStyle=S.lcol[id];g.lineWidth=1.3;g.stroke()});
+    let lx=x0,ly=yb+14;list.forEach(id=>{const t=lname(LIDX[id]),wd=g.measureText(t).width+24;if(lx+wd>W&&lx>x0){lx=x0;ly+=14}g.fillStyle=S.lcol[id];g.fillRect(lx,ly-3,8,6);g.fillStyle='#c4cbde';g.textAlign='left';g.fillText(t,lx+12,ly);lx+=wd})}
+  g.textAlign='left'}
+/* ---- time axis: dates (UTC) for the orbit and mission views, minutes from closest approach for a moon pass ---- */
+function dateTicks(t0,t1,w){const span=t1-t0;if(!(span>0))return [];const H=3600e3,D=86400e3,ppm=w/span;
+  const C=[[H,'h',1],[2*H,'h',2],[3*H,'h',3],[6*H,'h',6],[12*H,'h',12],[D,'d',1],[2*D,'d',2],[5*D,'d',5],[10*D,'d',10],[20*D,'d',20],[30.4*D,'M',1],[91*D,'M',3],[182*D,'M',6],[365*D,'y',1],[730*D,'y',2]];
+  let c=C.find(q=>q[0]*ppm>=64)||C[C.length-1];const out=[];
+  if(c[1]==='h'){const s=c[0];for(let t=Math.ceil(t0/s)*s;t<=t1;t+=s)out.push([t,'h'])}
+  else if(c[1]==='d'){const n=c[2],d0=new Date(t0),b=Date.UTC(d0.getUTCFullYear(),d0.getUTCMonth(),d0.getUTCDate());
+    for(let t=b;t<=t1;t+=D){if(t<t0)continue;const dom=new Date(t).getUTCDate(),nx=new Date(t+D).getUTCDate();if(n===1||((dom-1)%n===0&&nx!==1))out.push([t,'d'])}}
+  else{const d0=new Date(t0);let y=d0.getUTCFullYear(),m=d0.getUTCMonth();for(let n=0;n<400;n++){const mm=m+n,yy=y+Math.floor(mm/12),mo=((mm%12)+12)%12;const t=Date.UTC(yy,mo,1);if(t>t1)break;if(t<t0)continue;
+      if(c[1]==='M'&&mo%c[2]===0)out.push([t,'M']);if(c[1]==='y'&&mo===0&&yy%c[2]===0)out.push([t,'y'])}}
+  return out}
+function fmtTick(ms,type,first){const d=new Date(ms),p=n=>String(n).padStart(2,'0'),Y=d.getUTCFullYear(),M=p(d.getUTCMonth()+1),Dd=p(d.getUTCDate());
+  if(type==='h')return d.getUTCHours()===0?`${M}-${Dd}`:`${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
+  if(type==='d')return (first||(d.getUTCMonth()===0&&d.getUTCDate()===1))?`${Y}-${M}-${Dd}`:`${M}-${Dd}`;
+  if(type==='M')return `${Y}-${M}`;return String(Y)}
+function axisA(g,x0,w,yA,mission,T1){const b0=mission?SEGS[0].t0ms:SG.t0ms,len=(mission?G:T1)*1000,t1=b0+len,tk=dateTicks(b0,t1,w);
+  g.save();g.font=SFONT;g.textBaseline='middle';g.fillStyle='#8d97b0';g.strokeStyle='#4a5470';g.lineWidth=1;
+  g.beginPath();g.moveTo(x0,yA+.5);g.lineTo(x0+w,yA+.5);g.stroke();
+  g.textAlign='left';g.fillText('UTC',0,yA+7);
+  let lastR=-1e9;tk.forEach(([t,ty],k)=>{const x=x0+(t-b0)/len*w;g.beginPath();g.moveTo(x+.5,yA);g.lineTo(x+.5,yA+3);g.stroke();
+    const s=fmtTick(t,ty,k===0),tw=g.measureText(s).width;if(x-tw/2<lastR+6||x+tw/2>x0+w+4)return;g.textAlign='center';g.fillText(s,x,yA+8);lastR=x+tw/2});
+  if(w>520){g.textAlign='right';g.fillText(`${fmtD(b0)} to ${fmtD(t1)}`,x0+w,8)}g.restore()}
+function axisB(g,x0,w,yA,t0,t1){const span=t1-t0;if(!(span>0))return;const st=[1,2,5,10,15,30,60,120,300,600,900,1800,3600,7200],s=st.find(q=>q/span*w>=56)||st[st.length-1];
+  g.save();g.font=SFONT;g.textBaseline='middle';g.fillStyle='#8d97b0';g.strokeStyle='#4a5470';g.lineWidth=1;g.beginPath();g.moveTo(x0,yA+.5);g.lineTo(x0+w,yA+.5);g.stroke();
+  g.textAlign='left';g.fillText('from CA',0,yA+7);g.textAlign='center';
+  for(let t=Math.ceil(t0/s)*s;t<=t1;t+=s){const x=x0+(t-t0)/span*w;g.beginPath();g.moveTo(x+.5,yA);g.lineTo(x+.5,yA+3);g.stroke();
+    const a=Math.abs(t),u=a===0?'0':(a<120?a+' s':(a<7200?(a/60)+' min':(a/3600)+' h'));if(x>x0+16&&x<x0+w-16)g.fillText((t<0?'−':(t>0?'+':''))+u,x,yA+8)}
+  g.restore()}
+function drawTimeline(){const wrap=$('#tlwrap');if(!tl.clientWidth)return;
+  const need=timelineNeed(tl.clientWidth);wrap.style.minHeight=need+'px';const wantH=Math.max(S.graphH,need)+'px';if(wrap.style.height!==wantH)wrap.style.height=wantH;
+  const dpr=Math.min(window.devicePixelRatio||1,2),W=tl.clientWidth,H=tl.clientHeight;if(!W||!H)return;tl.width=W*dpr;tl.height=H*dpr;const g=tg2;g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,W,H);
+  g.font=LFONT;g.textBaseline='middle';
+  const lab=(t,y,c)=>{g.fillStyle=c||'#9aa4bd';g.textAlign='left';g.fillText(t,0,y)};const x0=ML,w=Math.floor(W-ML-2),spec=focusSpec(),list=layerList(),lb=layerBlockH(W);
+  if(S.mode==='A'&&SD){const mission=S.view==='mission',T1=SG.span;
+    if(mission&&!HIST.ready){g.fillStyle='#9aa4bd';g.textAlign='center';g.fillText(`Loading earlier orbits ${HIST.loaded}/${SEGS.length}…`,W/2,H/2);g.textAlign='left';placeCursor();return}
+    const nm=extraH(spec),yT=18,yMoon=H-6-lb-24,yMag=yMoon-nm,yDist=yMag-28,hp=yDist-4-yT-AXH;
+    const X=t=>mission?x0+(OFF[SG.idx]+t)/G*w:x0+t/T1*w;
+    /* title */
+    g.fillStyle='#e4e8f2';g.textAlign='left';g.fillText('Focus: '+spec.title,x0,8,w);lab('graph',8,'#6b7799');
+    /* focus panel */
+    const ax=focusAxis(spec,mission),fn=spec.kind==='layer'?fnLayer(spec.l.i):(spec.kind==='b'?((d,sl,i)=>Math.log10(Math.max(d.B[i],1))):((d,sl,i)=>{const b=d.Br[i];return Math.sign(b)*Math.log10(1+Math.abs(b))}));
+    if(mission){const sx0=X(0),sx1=X(T1);g.fillStyle='rgba(255,255,255,.05)';g.fillRect(sx0,yT,Math.max(1.5,sx1-sx0),hp+AXH+4+28+nm+24)}
+    drawFocus(g,x0,w,yT,hp,spec,agg(fn,w,mission),ax);
+    axisA(g,x0,w,yT+hp,mission,T1);
+    /* orbit boundaries and moon passes */
+    if(mission){g.strokeStyle='rgba(98,110,150,.35)';g.lineWidth=1;g.font=SFONT;g.textAlign='center';g.fillStyle='#6b7799';
+      SEGS.forEach((s,si)=>{const xa=x0+OFF[si]/G*w,xb=x0+(OFF[si]+s.span)/G*w;g.beginPath();g.moveTo(xa,yT);g.lineTo(xa,yMoon+10);g.stroke();if(xb-xa>=20)g.fillText(shortId(s.id),(xa+xb)/2,yT+7)});
+      FLYS.forEach(f=>{if(!f.seg||f.tca_off==null)return;const x=x0+(OFF[SEGBY[f.seg].idx]+f.tca_off)/G*w;g.strokeStyle=hex(MCOL[f.moon]);g.globalAlpha=.55;g.beginPath();g.moveTo(x,yDist);g.lineTo(x,yMoon+10);g.stroke();g.globalAlpha=1});g.font=LFONT;g.textAlign='left'}
+    else FLYS.filter(f=>f.seg===SG.id&&f.tca_off!=null).forEach((f,k)=>{const x=X(f.tca_off);g.strokeStyle=hex(MCOL[f.moon]);g.lineWidth=1;g.globalAlpha=.7;g.beginPath();g.moveTo(x,yT);g.lineTo(x,yMoon+10);g.stroke();g.globalAlpha=1;g.fillStyle=hex(MCOL[f.moon]);g.textAlign=x>x0+w-40?'right':'left';g.fillText(f.id,x+(x>x0+w-40?-3:3),yT+7+(k%2)*10);g.textAlign='left'});
+    /* distance row */
+    const dm=Math.max(10,maxOver(mission,d=>{const a=new Float32Array(d.ts.length);for(let i=0;i<a.length;i++)a[i]=Math.hypot(d.X[i],d.Y[i],d.Z[i]);return a})*1.05),Yd=v=>yDist+26-v/dm*24;
+    lab('distance',yDist+19,'#e4e8f2');lab(Math.round(dm)+' Rj',yDist+6,'#6b7799');
+    g.strokeStyle='#1d2336';g.lineWidth=1;g.beginPath();g.moveTo(x0,Yd(0));g.lineTo(x0+w,Yd(0));g.stroke();
+    {const ad=agg(fnDist,w,mission);g.beginPath();let pen=false;for(let px=0;px<w;px++){const v=ad.av[px];if(v!==v){pen=false;continue}if(pen)g.lineTo(x0+px+.5,Yd(v));else g.moveTo(x0+px+.5,Yd(v));pen=true}g.strokeStyle='#e4e8f2';g.lineWidth=1.2;g.stroke()}
+    /* magnetometer context strips (the one that is not the focus) */
+    {let y=yMag;const rows=[];if(spec.kind!=='br')rows.push('Br');if(spec.kind!=='b')rows.push('|B|');
+      rows.forEach(nmx=>{lab(nmx,y+5,'#9aa4bd');const a=agg(nmx==='Br'?((d,sl,i)=>d.Br[i]):((d,sl,i)=>Math.log10(Math.max(d.B[i],1))),w,mission);
+        for(let px=0;px<w;px++){const v=a.av[px];if(v!==v)continue;if(nmx==='Br')g.fillStyle=Math.abs(v)<.5?'#7861ad':(v>0?'#ff7a59':'#5aa9ff');else g.fillStyle=rgbCss(ramp((v-.2)/3.1));g.fillRect(x0+px,y+1,1.2,8)}y+=11})}
+    /* moon table coverage */
+    lab('moon positions',yMoon+8);g.fillStyle='#b9a3ff';
+    if(mission){SEGS.forEach((s,si)=>s.tbl.forEach(([a,b])=>{const xa=x0+(OFF[si]+Math.max(0,a))/G*w,xb=x0+(OFF[si]+Math.min(s.span,b))/G*w;g.fillRect(xa,yMoon+3,Math.max(1.5,xb-xa),6)}))}
+    else{SG.tbl.forEach(([a,b])=>{g.fillRect(X(Math.max(0,a)),yMoon+3,Math.max(2,X(Math.min(T1,b))-X(Math.max(0,a))),6)});g.strokeStyle='#b9a3ff';g.setLineDash([2,3]);g.beginPath();g.moveTo(x0,yMoon+6);g.lineTo(x0+w,yMoon+6);g.stroke();g.setLineDash([])}
+    g.fillStyle='#9aa4bd';g.textAlign='right';g.fillText(mission?'whole mission, real time, blank where there is no field data · shaded: current orbit · solid: PDS moon table':'solid: PDS moon table · dotted: interpolated between tables',x0+w,yMoon+19);g.textAlign='left';
+    drawLayerBlock(g,x0,w,W,yMoon+24,list,l=>stripCodes(l.i,w,mission));
+  }else if(S.mode==='B'&&FD){const t0=FD.tp[0],t1=FD.tp[FD.tp.length-1],X=t=>x0+(t-t0)/(t1-t0)*w,f=FM,nm=extraH(spec),yT=18,yCap=H-6-lb-16,yMag=yCap-nm,yDist=yMag-28,hp=yDist-4-yT-AXH;
+    g.fillStyle='#e4e8f2';g.textAlign='left';g.fillText('Focus: '+spec.title,x0,8,w*.62);lab('graph',8,'#6b7799');
+    g.fillStyle='#9aa4bd';g.textAlign='right';g.fillText(RES_TXT[f.res](f),x0+w,8);g.textAlign='left';
+    const yb=yT+hp;axisB(g,x0,w,yb,t0,t1);
+    if(spec.kind==='layer'){const l=spec.l,ax=focusAxis(spec,false),Y=v=>yb-v*hp;g.font=SFONT;g.textAlign='right';g.lineWidth=1;
+      ax.ticks.forEach(([v,t])=>{g.strokeStyle='#1d2336';g.beginPath();g.moveTo(x0,Y(v));g.lineTo(x0+w,Y(v));g.stroke();g.fillStyle='#6b7799';g.fillText(t,x0-6,Y(v))});
+      g.beginPath();let pen=false;for(let px=0;px<w;px++){const q=codeB(l.i,t0+(px+.5)/w*(t1-t0));if(!q){pen=false;continue}const v=q<2?0:(q-2)/253,y=Y(v);if(pen)g.lineTo(x0+px+.5,y);else g.moveTo(x0+px+.5,y);pen=true}
+      g.strokeStyle='#5cc8ff';g.lineWidth=1.6;g.stroke();g.textAlign='left';g.font=LFONT}
+    else{let bm=Math.max(10,bRange[1]*1.1);const Y=v=>yb-v/bm*hp;g.font=SFONT;g.textAlign='right';
+      [0,.5,1].forEach(fq=>{g.strokeStyle='#1d2336';g.lineWidth=1;g.beginPath();g.moveTo(x0,Y(fq*bm));g.lineTo(x0+w,Y(fq*bm));g.stroke();g.fillStyle='#6b7799';g.fillText(f.nf?String(Math.round(fq*bm)):'',x0-6,Y(fq*bm))});g.textAlign='left';g.font=LFONT;
+      if(f.nf){g.beginPath();let pen=false;for(let i=0;i<f.nf;i++){const x=X(FD.tf[i]),y=Y(Math.min(bm,FD.bm[i]));if(i&&FD.tf[i]-FD.tf[i-1]>600)pen=false;if(pen)g.lineTo(x,y);else g.moveTo(x,y);pen=true}g.strokeStyle='#ffb347';g.lineWidth=1.4;g.stroke()}
+      else{g.fillStyle='#9aa4bd';g.fillText('no field samples for this pass',x0+8,yT+hp/2)}}
+    /* distance row */
+    const rmax=Math.max(...Array.from(FD.tp).map((_,i)=>Math.hypot(FD.x[i],FD.y[i],FD.z[i])).filter((v,i)=>i%5===0),1.5),Yd=v=>yDist+26-v/rmax*24;
+    lab('distance',yDist+19,'#b9a3ff');lab(rmax.toFixed(0)+' radii',yDist+6,'#6b7799');
+    g.beginPath();for(let i=0;i<FD.tp.length;i+=3){const x=X(FD.tp[i]),y=Yd(Math.hypot(FD.x[i],FD.y[i],FD.z[i]));i?g.lineTo(x,y):g.moveTo(x,y)}g.strokeStyle='#b9a3ff';g.setLineDash([3,3]);g.lineWidth=1;g.stroke();g.setLineDash([]);
+    if(nm){lab('|B| nT',yMag+14,'#ffb347');const bmx=Math.max(10,bRange[1]*1.1);g.beginPath();let pen=false;for(let i=0;i<f.nf;i++){const x=X(FD.tf[i]),y=yMag+26-Math.min(bmx,FD.bm[i])/bmx*24;if(i&&FD.tf[i]-FD.tf[i-1]>600)pen=false;if(pen)g.lineTo(x,y);else g.moveTo(x,y);pen=true}g.strokeStyle='#ffb347';g.lineWidth=1.2;g.stroke()}
+    const xc=X(0);g.strokeStyle='#ffd36b';g.lineWidth=1;g.globalAlpha=.7;g.beginPath();g.moveTo(xc,yT);g.lineTo(xc,yCap);g.stroke();g.globalAlpha=1;g.fillStyle='#ffd36b';g.textAlign='left';g.fillText('closest approach',xc+5,yCap+8);
+    drawLayerBlock(g,x0,w,W,yCap+16,list,l=>{const c=new Uint8Array(w);for(let px=0;px<w;px++)c[px]=codeB(l.i,t0+(px+.5)/w*(t1-t0));return c})}
+  placeCursor()}
+/* ---------- hover readout on the graph ---------- */
+const tip=$('#tltip'),guide=$('#tlguide');
+function hoverHtml(px,wdt){const spec=focusSpec();
+  if(S.mode==='A'&&SD){const mission=S.view==='mission';let si=SG.idx,loc;
+    if(mission){if(!HIST.ready)return null;const g=clamp(px/wdt*G,0,G);si=segAt(g);loc=g-OFF[si]}else loc=clamp(px/wdt*SG.span,0,SG.span);
+    const d=SEGC(si),sl=SLC(si),s=SEGS[si];if(!d)return null;const i=near(d.ts,loc),ok=Math.abs(d.ts[i]-loc)<=Math.max(d.gap,s.span/wdt*1.5);
+    let o=`<b>${fmtMs(s.t0ms+loc*1000)} UTC</b><br><span class="k">${pretty(s.id)}${mission?' · nearest 4-min point':''}</span>`;if(!ok)return o+'<br><span class="k">no data here</span>';
+    o+=`<br><span class="k">distance</span> ${Math.hypot(d.X[i],d.Y[i],d.Z[i]).toFixed(1)} Rj<br><span class="k">|B|</span> ${d.B[i].toFixed(1)} nT <span class="k">Br</span> ${s.novec?'not in file':f1(d.Br[i])}`;
+    const ids=S.sel.slice();if(LIDX[S.colorBy]&&!ids.includes(S.colorBy))ids.unshift(S.colorBy);
+    ids.forEach(id=>{const l=LIDX[id],a=sl[l.i];o+=`<br><span style="color:${S.lcol[id]||'#9aa4bd'}">&#9632;</span> <span class="k">${lname(l)}</span> ${fmtL(l,a?a[i]:0)}`});return o}
+  if(S.mode==='B'&&FD){const t=FD.tp[0]+px/wdt*(FD.tp[FD.tp.length-1]-FD.tp[0]);let o=`<b>${fmtMs(FM.tca_ms+t*1000)} UTC</b><br><span class="k">${f1(t/60)} min from closest approach</span>`;
+    if(FM.nf){const j=near(FD.tf,t);if(Math.abs(FD.tf[j]-t)<=Math.max(300,(FM.cad||3)*3))o+=`<br><span class="k">|B|</span> ${lerp(FD.tf,FD.bm,t).toFixed(0)} nT`}
+    const ids=S.sel.slice();if(LIDX[S.colorBy]&&!ids.includes(S.colorBy))ids.unshift(S.colorBy);
+    ids.forEach(id=>{const l=LIDX[id];o+=`<br><span style="color:${S.lcol[id]||'#9aa4bd'}">&#9632;</span> <span class="k">${lname(l)}</span> ${fmtL(l,codeB(l.i,t))}`});return o}
+  return null}
+function tipHide(){tip.hidden=true;guide.hidden=true}
+tl.addEventListener('pointermove',e=>{if(drag)return;const r=tl.getBoundingClientRect(),wdt=r.width-ML-2,x=e.clientX-r.left-ML;if(x<0||x>wdt){tipHide();return}
+  const html=hoverHtml(x,wdt);if(!html){tipHide();return}tip.innerHTML=html;tip.hidden=false;guide.hidden=false;guide.style.left=(ML+x)+'px';
+  const tw=tip.offsetWidth;tip.style.left=clamp(ML+x+14,0,r.width-tw-2)+'px';tip.style.top=clamp(e.clientY-r.top-tip.offsetHeight-8,2,Math.max(2,r.height-tip.offsetHeight-2))+'px'});
+tl.addEventListener('pointerleave',tipHide);
+function placeCursor(){if(S.mode==='A'&&!SD)return;if(S.mode==='B'&&!FD)return;const r=range(),W=tl.clientWidth,x=ML+(curT()-r[0])/(r[1]-r[0])*(W-ML-2);$('#cur').style.left=x+'px';$('#scrub').value=Math.round((curT()-r[0])/(r[1]-r[0])*1000)}
+function scrubTo(clientX){const rc=tl.getBoundingClientRect(),r=range(),f=clamp((clientX-rc.left-ML)/(rc.width-ML-2),0,1);setT(r[0]+f*(r[1]-r[0]))}
+let drag=false;tl.addEventListener('pointerdown',e=>{drag=true;tl.setPointerCapture(e.pointerId);scrubTo(e.clientX)});
+tl.addEventListener('pointermove',e=>{if(drag)scrubTo(e.clientX)});tl.addEventListener('pointerup',()=>drag=false);tl.addEventListener('pointercancel',()=>drag=false);
+$('#scrub').addEventListener('input',e=>{const r=range();setT(r[0]+(+e.target.value/1000)*(r[1]-r[0]))});
+window.addEventListener('keydown',e=>{const t=e.target,tg=t.tagName;if(tg==='INPUT'||tg==='SELECT'||tg==='TEXTAREA'||tg==='BUTTON'||tg==='SUMMARY'||tg==='A'||t.isContentEditable||(t.getAttribute&&t.getAttribute('role')==='separator'))return;if(e.code==='Space'){e.preventDefault();$('#play').click()}});
+
+/* ---------- per-frame update ---------- */
+const v1=new THREE.Vector3(),v2=new THREE.Vector3(),v3=new THREE.Vector3(),mp={};MK.forEach(k=>mp[k]=new THREE.Vector3());
+let LEG_NV=null;
+function updateA(){if(!SD)return;const T=S.TA,d=SD;if(LEG_NV!==!!SG.novec){LEG_NV=!!SG.novec;legend()}
+  jg.rotation.z=((SG.psi0+SG.rate*T/86400)*RAD);
+  const i=near(d.ts,T),gap=Math.abs(d.ts[i]-T)>d.gap||T>d.ts[d.ts.length-1]||(T<d.ts[0]&&d.ts[0]-T>d.gap),utc=SG.t0ms/1000+T;
+  let x,y,z,pos=true;
+  if(!gap){x=lerp(d.ts,d.X,T);y=lerp(d.ts,d.Y,T);z=lerp(d.ts,d.Z,T)}
+  else{const q=trajAt(utc);if(q){x=q[0];y=q[1];z=q[2]}else{pos=false;x=lerp(d.ts,d.X,T);y=lerp(d.ts,d.Y,T);z=lerp(d.ts,d.Z,T)}}
+  v1.set(x,y,z);probe.position.copy(v1);probeG.position.copy(v1);probe.visible=!gap;probeG.visible=gap&&pos;
+  { const bi=T>=d.ts[d.ts.length-1]?d.ts.length-1:bis(d.ts,T);past.geometry.setDrawRange(0,bi+1) }
+  updateTrace(utc,x,y,z,gap&&!pos);
+  const mOK=!SG.nomoon&&T<=(SG.m-1)*3600;moonG.visible=!!S.layer.moons&&mOK;
+  mLine.visible=pos&&mOK&&!!S.layer.mline&&!!S.layer.moons;const dist=camA.position.distanceTo(ctlA.target);
+  if(!gap&&!SG.novec){v2.set(d.Bx[i],d.By[i],d.Bz[i]).normalize();bArrow.setDirection(v2);bArrow.position.copy(v1);const L=clamp(dist*.07,.8,25);bArrow.setLength(L,L*.28,L*.16);bArrow.visible=S.layer.bvec}else bArrow.visible=false;
+  let nk=null,nd=1e9;if(mOK)MK.forEach(k=>{moonPos(k,T,mp[k]);moonObj[k].d.position.copy(mp[k]);moonObj[k].l.position.copy(mp[k]);const dd=v1.distanceTo(mp[k]);if(dd<nd){nd=dd;nk=k}});
+  if(mOK&&nk){const gp=mLine.geometry.attributes.position;gp.setXYZ(0,x,y,z);gp.setXYZ(1,mp[nk].x,mp[nk].y,mp[nk].z);gp.needsUpdate=true}
+  let tgt=v2.set(0,0,0);if(S.tgtA==='probe')tgt=v1;else if(mOK&&mp[S.tgtA])tgt=mp[S.tgtA];
+  v3.copy(tgt);const dl=v3.clone().sub(ctlA.target);camA.position.add(dl);ctlA.target.copy(v3);
+  const R=Math.hypot(x,y,z),lat=Math.asin(z/R)/RAD,phi=Math.atan2(y,x)/RAD,lt=((12+phi/15)%24+24)%24,wl=((((SG.psi0+SG.rate*T/86400)-phi)%360)+360)%360;
+  const ms=SG.t0ms+T*1000;
+  const stat=gap?(pos?'<span class="chip g" title="position from the PDS trajectory file; no field data at this time">○ position only</span>':'<span class="chip n" title="no position in the archive">∅ no position</span>'):'<span class="chip m" title="field data at this time">● measured</span>';
+  const moonTxt=mOK&&nk?`<span class="k">nearest moon</span> ${MN(nk)} <b>${nd<1?(nd*RJKM/MBY[nk].rk).toFixed(1)+' radii':nd.toFixed(2)+' Rj'}</b> <span class="k">(${SG.tbl.some(([a,b])=>T>=a&&T<=b)?'table':'interpolated'})</span>`:'<span class="k">no moon table at this time</span>';
+  const fld=gap?'<div class="warnc">no field data at this time</div>':SG.novec?`<div class="hg"><span class="k">|B|</span><b class="meas">${d.B[i].toFixed(1)} nT</b></div><div class="k">field components are not in this file</div>`:`<div class="hg"><span class="k">|B|</span><b class="meas">${d.B[i].toFixed(1)} nT</b><span class="k">Br</span><b>${f1(d.Br[i])} nT</b></div><div class="hg bj"><span class="k">B (JSE)</span><span class="w2">${f1(d.Bx[i],0)} ${f1(d.By[i],0)} ${f1(d.Bz[i],0)} nT</span></div>`;
+  const note=gap?`<div class="k">${pos?'position from the PDS trajectory file':'no position in the archive'}</div>`+(()=>{const n=gapNote(ms);return n?`<div class="hn k">${n}</div>`:''})():'';
+  const pres=`<div class="k pr">MAG ${gap?'○':'●'} ${['EPD','PLS','PWS','HIC','DDS'].map(g=>g+' '+grpGlyph(g,T)).join(' ')}</div>`;
+  $('#hudc').innerHTML=`<div class="hh"><span class="t">${fmtMs(ms)} UTC</span>${stat}</div>`+(HUDMIN?'':`<div class="k">${pretty(SG.id)} · ${SG.idx+1}/${SEGS.length} · day ${(T/86400).toFixed(1)} of ${(SG.span/86400).toFixed(1)}</div>${gap?'':'<div class="k ns">nearest field sample '+Math.abs(d.ts[i]-T).toFixed(0)+' s away</div>'}
+<div class="hg"><span class="k">distance</span><b>${pos?R.toFixed(1):'–'} Rj</b><span class="k">lat</span><b>${pos?f1(lat)+'°':'–'}</b><span class="k">W lon</span><b>${pos?wl.toFixed(0)+'°':'–'}</b><span class="k">local time</span><b>${pos?lt.toFixed(1)+' h':'–'}</b></div>
+<div class="mn">${moonTxt}</div>${fld}${note}${pres}${hudLayers(T)}`);
+  hudLines();
+  $('#clock').textContent=fmtMs(ms)+' UTC'}
+function updateB(){if(!FD)return;const f=FM,d=FD,T=clamp(S.TB,d.tp[0],d.tp[d.tp.length-1]);
+  const x=lerp(d.tp,d.x,T),y=lerp(d.tp,d.y,T),z=lerp(d.tp,d.z,T);v1.set(x,y,z);probeB.position.copy(v1);
+  pastB.geometry.setDrawRange(0,bis(d.tp,T)+1);
+  let cnt=0;{let lo=0,hi=vecTimes.length;while(lo<hi){const m=(lo+hi)>>1;if(vecTimes[m]<=T)lo=m+1;else hi=m}cnt=lo}vecLines.geometry.setDrawRange(0,cnt*2);
+  let have=false,bx=0,by=0,bz=0,bm=0;
+  if(f.nf){const j=near(d.tf,T);have=Math.abs(d.tf[j]-T)<=Math.max(300,(f.cad||3)*3);if(have){bx=lerp(d.tf,d.bx,T);by=lerp(d.tf,d.by,T);bz=lerp(d.tf,d.bz,T);bm=Math.hypot(bx,by,bz)}}
+  if(have){v2.set(bx,by,bz).normalize();bArrowB.setDirection(v2);bArrowB.position.copy(v1);const L=clamp(camB.position.distanceTo(ctlB.target)*.14,.35,3);bArrowB.setLength(L,L*.25,L*.15);bArrowB.visible=S.layer.vec}else bArrowB.visible=false;
+  let tgt=v2.set(0,0,0);if(S.tgtB==='probe')tgt=v1;v3.copy(tgt);const dl=v3.clone().sub(ctlB.target);camB.position.add(dl);ctlB.target.copy(v3);
+  const r=Math.hypot(x,y,z),alt=(r-1)*MBY[f.moon].rk,ms=f.tca_ms+T*1000;
+  const statB=have?'<span class="chip m" title="field sample at this time">● measured</span>':'<span class="chip n" title="no field sample at this time">∅ no field</span>';
+  $('#hudc').innerHTML=`<div class="hh"><span class="t">${fmtMs(ms)} UTC</span>${statB}</div>`+(HUDMIN?'':`<div class="k">${f.id} · ${MN(f.moon)} · ${f1(T/60)} min from closest approach</div>
+<div class="hg"><span class="k">distance</span><b>${r.toFixed(2)} radii</b><span class="k">altitude</span><b>${alt.toLocaleString('en-US',{maximumFractionDigits:0})} km</b></div>
+${have?`<div class="hg"><span class="k">|B|</span><b class="meas">${bm.toFixed(0)} nT</b></div><div class="hg"><span class="k">Bx By Bz</span><span class="w2">${f1(bx,0)} ${f1(by,0)} ${f1(bz,0)} nT</span></div>`:`<div class="warnc">${f.nf?'no field sample at this time':'no field samples for this pass'}</div>`}${hudLayers(T)}`);
+  $('#clock').textContent=fmtMs(ms)+' UTC'}
+
+/* ---------- loop ---------- */
+function resize(){const st=$('#stage'),w=st.clientWidth,h=st.clientHeight;if(!w||!h)return;
+  document.documentElement.style.setProperty('--u',(mobileQ.matches?1:clamp(innerWidth/1280,.85,1)).toFixed(3));R_.setSize(w,h,false);
+  camA.aspect=camB.aspect=w/h;camA.updateProjectionMatrix();camB.updateProjectionMatrix();sprites.forEach(sizeSprite);legendFit();drawTimeline();drawMission()}
+new ResizeObserver(resize).observe($('#stage')); new ResizeObserver(()=>{drawTimeline();drawMission()}).observe($('#tlwrap'));
+let last=performance.now(),lastHash=0;
+function frame(now){const dt=Math.min(.1,(now-last)/1000);last=now;if(now-lastHash>1000){lastHash=now;setHash()}
+  if(S.play){if(S.mode==='A')advanceA(S.speed.A*dt);else{S.TB+=S.speed.B*dt;const e=FD.tp[FD.tp.length-1];if(S.TB>=e){S.TB=e;stopPlay()}}}
+  if(S.mode==='A'){updateA();ctlA.update();layoutLabels();R_.render(sA,camA)}else{updateB();ctlB.update();layoutLabels();R_.render(sB,camB)}
+  placeCursor();requestAnimationFrame(frame)}
+(async function init(){
+  if(typeof DecompressionStream==='undefined'){$('#busy').style.display='flex';$('#busy').textContent='This page needs a current browser (it uses built-in decompression).';return}
+  fillSegSel();fillFlySel();fillSpeed();applyLayers();drawMission();buildLayerUI();await buildTrace();
+  const h=new URLSearchParams(location.hash.slice(1));
+  (h.get('ly')||'').split(',').filter(id=>LIDX[id]).slice(0,8).forEach(id=>toggleLayer(id,true,true));refreshLayerUI();
+  if(LIDX[h.get('pc')]||h.get('pc')==='b')S.colorBy=h.get('pc');fillPC();
+  $$('details.grp').forEach(d=>{if(S.sel.some(id=>LIDX[id].grp===d.dataset.g))d.open=true});
+  const ht=h.get('t')!=null&&h.get('t')!==''&&Number.isFinite(+h.get('t'))?+h.get('t'):null;
+  if(h.get('fly')&&FLYBY[h.get('fly')]){await loadFly(h.get('fly'));if(FM.seg)await loadSeg(FM.seg,FM.tca_off);else await loadSeg('ORB08');setMode('B');if(ht!=null){S.TB=clamp(ht,FD.tp[0],FD.tp[FD.tp.length-1])}}
+  else{await loadSeg(SEGBY[h.get('orb')]?h.get('orb'):'ORB08',ht!=null?ht:undefined);setMode('A')}
+  let sv=null;try{sv=JSON.parse(localStorage.getItem('galileoAtlasLayout')||'null')}catch(e){}
+  if(sv&&sv.sideOn===false&&!mobileQ.matches)S.sideOn=false;
+  if(sv&&['3d','graph'].includes(sv.lay))setLayout(sv.lay);
+  else{setLayout('split');if(sv&&sv.lay==='custom'){S.lay='custom';S.graphH=S.graphWant=clamp(+sv.graphH||230,0,maxGraphH());S.sideW=clamp(+sv.sideW||328,220,620);applyLayout(true)}}
+  resize();requestAnimationFrame(frame);loadAllSegs()})();
+/* ---------- resizable panels ---------- */
+const mobileQ=window.matchMedia('(max-width:880px)');
+function layoutSave(){try{localStorage.setItem('galileoAtlasLayout',JSON.stringify({lay:S.lay,graphH:S.graphH,sideW:S.sideW,sideOn:S.sideOn!==false}))}catch(e){}}
+function applyLayout(save){$('#app').style.setProperty('--sideW',(S.sideOn===false?0:S.sideW)+'px');$('#side').hidden=$('#vsplit').hidden=S.sideOn===false;const stg=$('#sideTog');if(stg)stg.setAttribute('aria-pressed',String(S.sideOn!==false));document.documentElement.style.setProperty('--stageH',S.stageH+'vh');
+  $$('#laySel .chip').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.lay===S.lay)));resize();if(save)layoutSave()}
+function availH(){const fx=['header','#mission','#hsplit'].reduce((a,q)=>a+$(q).offsetHeight,0)+($('#dock').offsetHeight-$('#tlwrap').offsetHeight)+28;return $('#app').clientHeight-fx}
+function setLayout(name){const mob=mobileQ.matches,avail=availH();
+  const SB=Math.round(clamp(innerWidth/1300,.78,1)*328),P={ '3d':{g:.2,m:150,side:SB,stage:70},split:{g:.4,m:240,side:SB,stage:52},graph:{g:.68,m:360,side:Math.min(260,SB),stage:30}}[name];if(!P)return;
+  S.lay=name;S.graphWant=null;S.sideW=P.side;S.stageH=P.stage;S.graphH=Math.round(mob?P.m:Math.max(90,Math.min(P.g*avail,avail-190)));applyLayout(true)}
+document.addEventListener('click',e=>{if(e.target.id!=='sideTog'||mobileQ.matches)return;S.sideOn=S.sideOn===false;applyLayout(true)});
+function maxGraphH(){return Math.max(110,availH()-190)}
+let rzRaf=0;window.addEventListener('resize',()=>{if(rzRaf||mobileQ.matches)return;rzRaf=requestAnimationFrame(()=>{rzRaf=0;
+  S.sideW=Math.round(clamp(S.sideW,220,Math.min(620,innerWidth*.55)));
+  if(S.lay==='custom'){S.graphH=Math.min(S.graphWant==null?S.graphH:S.graphWant,maxGraphH());applyLayout(false)}else setLayout(S.lay)})});
+function dragSplit(el,onMove){let st=null;el.addEventListener('pointerdown',e=>{st={x:e.clientX,y:e.clientY,g:S.graphH,s:S.sideW};el.setPointerCapture(e.pointerId);el.classList.add('on')});
+  el.addEventListener('pointermove',e=>{if(!st)return;onMove(e,st)});const end=()=>{if(st){st=null;el.classList.remove('on');layoutSave()}};el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end)}
+let layRaf=0;const layQueue=()=>{if(layRaf)return;layRaf=requestAnimationFrame(()=>{layRaf=0;S.lay='custom';applyLayout(false)})};
+dragSplit($('#hsplit'),(e,st)=>{S.graphH=S.graphWant=Math.round(clamp(st.g+(st.y-e.clientY),0,maxGraphH()));layQueue()});
+dragSplit($('#vsplit'),(e,st)=>{S.sideW=Math.round(clamp(st.s+(st.x-e.clientX),220,Math.min(620,innerWidth*.55)));layQueue()});
+$('#hsplit').addEventListener('keydown',e=>{const d=e.key==='ArrowUp'?24:e.key==='ArrowDown'?-24:0;if(!d)return;e.preventDefault();S.graphH=S.graphWant=Math.round(clamp(S.graphH+d,0,maxGraphH()));S.lay='custom';applyLayout(true)});
+$('#vsplit').addEventListener('keydown',e=>{const d=e.key==='ArrowLeft'?24:e.key==='ArrowRight'?-24:0;if(!d)return;e.preventDefault();S.sideW=Math.round(clamp(S.sideW+d,220,Math.min(620,innerWidth*.55)));S.lay='custom';applyLayout(true)});
+bindGroup('#laySel',b=>setLayout(b.dataset.lay));
+$('#hud').addEventListener('click',e=>{if(e.target.id!=='hudx')return;HUDMIN=!HUDMIN;try{localStorage.setItem('galileoAtlasHud',HUDMIN?'1':'0')}catch(_){}setHudBtn();if(S.mode==='A')updateA();else updateB()});setHudBtn();
+window.__viewer={camA,camB,get LBL(){return LBL},S,jump,setMode,openSeg,openFly,P,toggleLayer,setColorBy,seekGlobal,setLayout,advanceA,HIST,OFF,SEGS,get G(){return G},get SG(){return SG},availH,TJ,probeG,trajAt,get trk(){return trkLine},get cnt(){return trkCnt},probe,fade,get mLine(){return mLine},LAYERS,get SD(){return SD},get FD(){return FD},get SL(){return SL},get FL(){return FL}};
+})();
+</script>

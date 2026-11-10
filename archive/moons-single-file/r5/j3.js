@@ -1,0 +1,15 @@
+const { chromium } = require('playwright'); const base = __dirname + '/../';
+const three = '/tmp/claude-0/-home-claude/59c9c79e-97f6-546e-8abd-eade5ba1a35d/scratchpad/viewer/npm/node_modules/three/';
+(async () => {
+  const b = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--use-gl=angle'] });
+  for (const file of ['moons_viewer.r4.html', 'moons_viewer.html']) {
+    const pg = await (await b.newContext({ viewport: { width: 1400, height: 900 } })).newPage(); pg.on('pageerror', e => console.log('PAGEERR', e.message));
+    await pg.route('**/*', route => { const u = route.request().url(); if (u.includes('three.min.js')) return route.fulfill({ path: three + 'build/three.min.js', contentType: 'application/javascript' }); if (u.includes('OrbitControls.js')) return route.fulfill({ path: three + 'examples/js/controls/OrbitControls.js', contentType: 'application/javascript' }); if (u.startsWith('file://') || u.startsWith('data:')) return route.continue(); return route.abort(); });
+    await pg.goto('file://' + base + file + '#FLY:G29&tier=LOW'); await pg.waitForTimeout(2000);
+    const r = await pg.evaluate(() => { const M = window.__moons; const mean = (d, W, H) => { let s = [0, 0, 0], w = 0; for (let y = 0; y < H; y++) { const c = Math.cos((.5 - (y + .5) / H) * Math.PI); for (let x = 0; x < W; x++) { const o = 4 * (y * W + x); s[0] += d[o] * c; s[1] += d[o + 1] * c; s[2] += d[o + 2] * c; w += c } } return s.map(v => +(v / w).toFixed(1)) }; const lo = M.texture('JUPITER', 256, 128).canvas, ld = lo.getContext('2d').getImageData(0, 0, 256, 128).data; const hi = M.texData({ type: 'body', kind: 'JUPITER', W: 512, H: 256, hi: 1 }); const cap = M.capTexture(6.53, 4.88, 10, 256, 256).canvas, cd = cap.getContext('2d').getImageData(0, 0, 256, 256).data; let cs = [0, 0, 0]; for (let i = 0; i < cd.length; i += 4) { cs[0] += cd[i]; cs[1] += cd[i + 1]; cs[2] += cd[i + 2] } return { lowMean: mean(ld, 256, 128), hiMean: mean(hi.rgba, 512, 256), capMean: cs.map(v => +(v / (cd.length / 4)).toFixed(1)) } });
+    const tm = {}; for (const [t, z] of [[170, 'local'], [700, 'local']]) { await pg.evaluate(() => window.__moons.loadScene('PROBE')); await pg.evaluate(([t, z]) => { const M = window.__moons; M.setFollow('PROBE'); M.setT(t); M.zoomTo(z) }, [t, z]); await pg.waitForTimeout(6000); tm[t] = await pg.evaluate(() => ({ frame: +window.__moons.frameMs.toFixed(1), tris: window.__moons.renderer.info.render.triangles, calls: window.__moons.renderer.info.render.calls })) }
+    await pg.evaluate(() => { const M = window.__moons; M.loadScene('FLY:G29'); M.setFollow('JUPITER'); M.zoomTo('local') }); await pg.waitForTimeout(5000); tm.jupLocal = await pg.evaluate(() => ({ frame: +window.__moons.frameMs.toFixed(1), tris: window.__moons.renderer.info.render.triangles, calls: window.__moons.renderer.info.render.calls }));
+    console.log(file, JSON.stringify(r), JSON.stringify(tm)); await pg.close();
+  }
+  await b.close();
+})();

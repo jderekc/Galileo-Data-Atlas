@@ -1,0 +1,56 @@
+LOW scenes 37
+HIGH scenes 37
+ERRORS []
+errs []
+errs []
+errors []
+"hiq":{"left":0,"done":0,"ok":true,"workers":0}
+"hiq":{"left":1,"done":0,"ok":true,"workers":1}
+"hiq":{"left":0,"done":1,"ok":true,"workers":1}
+"hiq":{"left":0,"done":1,"ok":true,"workers":1}
+"hiq":{"left":3,"done":0,"ok":true,"workers":1}
+errs []
+noWorker 2006 ms
+"hiq":{"left":0,"done":1,"ok":false,"workers":0}
+errs []
+scenes 37 [ 'FLY:C30', 'FLY:A34' ]
+FLY:I0  :: 1995-12-07 17:45:58 UTC · CA +0.0 min | range to Io | 1.495 radii | 2719 km | altitude | 901 km | Io from Jupiter | 5.876 Rj | JSE az | 357.08° | orbiter attitude | unoriented (nearest ROTATT row is 1
+FLY:G1  :: 1996-06-27 06:29:06 UTC · CA +0.0 min | range to Ganymede | 1.317 radii | 3469 km | altitude | 835 km | Ganymede from Jupiter | 15.002 Rj | JSE az | 348.78° | orbiter attitude | ROTATT row 06:29:06.22
+FLY:G2  :: 1996-09-06 18:59:34 UTC · CA +0.0 min | range to Ganymede | 1.099 radii | 2895 km | altitude | 261 km | Ganymede from Jupiter | 15.001 Rj | JSE az | 341.57° | orbiter attitude | ROTATT row 18:59:34.12
+FLY:C3  :: 1996-11-04 13:34:28 UTC · CA +0.0 min | range to Callisto | 1.469 radii | 3539 km | altitude | 1130 km | Callisto from Jupiter | 26.235 Rj | JSE az | 296.82° | orbiter attitude | ROTATT row 13:34:28.3
+FLY:E4  :: 1996-12-19 06:52:58 UTC · CA +0.0 min | range to Europa | 1.447 radii | 2257 km | altitude | 697 km | Europa from Jupiter | 9.454 Rj | JSE az | 70.46° | orbiter attitude | ROTATT row 06:52:57.947 (-0.
+FLY:E6  :: 1997-02-20 17:06:10 UTC · CA +0.0 min | range to Europa | 1.379 radii | 2151 km | altitude | 591 km | Europa from Jupiter | 9.457 Rj | JSE az | 14.83° | orbiter attitude | ROTATT row 17:06:10.023 (0.0
+FLY:G7  :: 1997-04-05 07:09:58 UTC · CA +0.0 min | range to Ganymede | 2.178 radii | 5736 km | altitude | 3102 km | Ganymede from Jupiter | 14.962 Rj | JSE az | 115.86° | orbiter attitude | ROTATT row 07:09:57.7
+FLY:G8  :: 1997-05-07 15:56:10 UTC · CA +0.0 min | range to Ganymede | 1.609 radii | 4237 km | altitude | 1603 km | Ganymede from Jupiter | 14.981 Rj | JSE az | 301.83° | orbiter attitude | ROTATT row 15:56:10.1
+FLY:C9  :: 1997-06-25 13:47:50 UTC · CA +0.0 min | range to Callisto | 1.171 radii | 2821 km | altitude | 412 km | Callisto from Jupiter | 26.200 Rj | JSE az | 262.99° | orbiter attitude | ROTATT row 13:47:50.27
+FLY:G9 {"Europa inside":[-1760,1820,41]} :: 1997-06-26 17:19:30 UTC · CA +0.0 min | range to Ganymede | 31.274 radii | 82375 km | altitude | 79741 km | Ganymede from Jupiter | 14.985 Rj | JSE az | 296.32° | geometric shadow of Jupiter | Europa 
+FLY:C10  :: 1997-09-17 00:18:54 UTC · CA +0.0 min | range to Callisto | 1.220 radii | 2938 km | altitude | 529 km | Callisto from Jupiter | 26.195 Rj | JSE az | 255.53° | orbiter attitude | ROTATT row 00:18:54.31
+FLY:E11  :: 1997-11-06 20:31:44 UTC · CA +0.0 min | range to Europa | 2.313 radii | 3608 km | altitude | 2048 km | Europa from Jupiter | 9.320 Rj | JSE az | 344.12° | orbiter attitude | ROTATT row 20:31:43.690 (-
+FLY:G12  :: 1997-12-15 09:58:08 UTC · CA +0.0 min | range to Ganymede | 6.468 radii | 17037 km | altitude | 14403 km | Ganymede from Jupiter | 15.003 Rj | JSE az | 280.32° | orbiter attitude | ROTATT row 09:57:59
+FLY:E12  :: 1997-12-16 12:03:20 UTC · CA +0.0 min | range to Europa | 1.132 radii | 1766 km | altitude | 206 km | Europa from Jupiter | 9.442 Rj | JSE az | 39.96° | orbiter attitude | ROTATT row 12:03:19.978 (-0.
+FLY:E14  :: 1998-03-29 13:21:04 UTC · CA +0.0 min | range to Europa | 2.057 radii | 3209 km | altitude | 1649 km | Europa from Jupiter | 9.462 Rj | JSE az | 36.48° | orbiter attitude | ROTATT row 13:21:04.329 (0.
+FLY:E15  :: 1998-05-31 21:12:56 UTC · CA +0.0 min | range to Europa | 2.615 radii | 4080 km | altitude | 2520 km | Europa from Jupiter | 9.471 Rj | JSE az | 330.79° | orbiter attitude | ROTATT row 21:12:55.731 (-
+FLY:E16  :: 1998-07-21 05:03:44 UTC · CA +0.0 min | range to Europa | 2.179 radii | 3399 km | altitude | 1839 km | Europa from Jupiter | 9.346 Rj | JSE az | 27.45° | orbiter attitude | unoriented (nearest ROTATT 
+FLY:E17 {"Ganymede inside":[-1760,1840,41]} :: 1998-09-26 03:54:20 UTC · CA +0.0 min | range to Europa | 3.300 radii | 5147 km | altitude | 3587 km | Europa from Jupiter | 9.350 Rj | JSE az | 328.52° | geometric shadow of Jupiter | Ganymede inside
+FLY:E18 {"Ganymede inside":[-1400,2180,41]} :: 1998-11-22 11:38:26 UTC · CA +0.0 min | range to Europa | 2.459 radii | 3836 km | altitude | 2276 km | Europa from Jupiter | 9.308 Rj | JSE az | 15.81° | geometric shadow of Jupiter | Ganymede inside†
+FLY:E19 {"Io inside":[-1780,1800,41]} :: 1999-02-01 02:19:50 UTC · CA +0.0 min | range to Europa | 1.926 radii | 3004 km | altitude | 1444 km | Europa from Jupiter | 9.317 Rj | JSE az | 327.84° | geometric shadow of Jupiter | Io inside† | or
+FLY:C20  :: 1999-05-05 13:56:18 UTC · CA +0.0 min | range to Callisto | 1.546 radii | 3724 km | altitude | 1315 km | Callisto from Jupiter | 26.273 Rj | JSE az | 87.34° | orbiter attitude | unoriented (nearest RO
+FLY:C21  :: 1999-06-30 07:46:50 UTC · CA +0.0 min | range to Callisto | 1.433 radii | 3451 km | altitude | 1042 km | Callisto from Jupiter | 26.213 Rj | JSE az | 206.15° | orbiter attitude | unoriented (nearest R
+FLY:C22  :: 1999-08-14 08:30:52 UTC · CA +0.0 min | range to Callisto | 1.952 radii | 4702 km | altitude | 2293 km | Callisto from Jupiter | 26.231 Rj | JSE az | 91.99° | orbiter attitude | unoriented (nearest RO
+FLY:C23  :: 1999-09-16 17:27:02 UTC · CA +0.0 min | range to Callisto | 1.434 radii | 3455 km | altitude | 1046 km | Callisto from Jupiter | 26.232 Rj | JSE az | 88.81° | orbiter attitude | unoriented (nearest RO
+FLY:I24  :: 1999-10-11 04:33:02 UTC · CA +0.0 min | range to Io | 1.338 radii | 2433 km | altitude | 615 km | Io from Jupiter | 5.896 Rj | JSE az | 340.80° | orbiter attitude | ROTATT row 04:33:01.975 (-0.0 s fro
+FLY:E25  :: 1999-11-25 16:29:04 UTC · CA +0.0 min | range to Europa | 6.542 radii | 10206 km | altitude | 8646 km | Europa from Jupiter | 9.476 Rj | JSE az | 227.85° | orbiter attitude | unoriented (nearest ROTAT
+FLY:I25  :: 1999-11-26 04:05:20 UTC · CA +0.0 min | range to Io | 1.167 radii | 2122 km | altitude | 304 km | Io from Jupiter | 5.909 Rj | JSE az | 333.14° | orbiter attitude | unoriented (nearest ROTATT row 128 
+FLY:E26  :: 2000-01-03 17:59:44 UTC · CA +0.0 min | range to Europa | 1.223 radii | 1908 km | altitude | 348 km | Europa from Jupiter | 9.459 Rj | JSE az | 223.74° | orbiter attitude | ROTATT row 17:59:43.734 (-0
+FLY:I27  :: 2000-02-22 13:46:42 UTC · CA +0.0 min | range to Io | 1.111 radii | 2019 km | altitude | 201 km | Io from Jupiter | 5.923 Rj | JSE az | 313.94° | orbiter attitude | ROTATT row 13:46:41.902 (-0.1 s fro
+FLY:G28 {"Io inside":[-1800,1780,41]} :: 2000-05-20 10:10:10 UTC · CA +0.0 min | range to Ganymede | 1.307 radii | 3443 km | altitude | 809 km | Ganymede from Jupiter | 14.991 Rj | JSE az | 191.90° | geometric shadow of Jupiter | Io inside† 
+FLY:G29 {"Ganymede inside":[-1641,-1104,7],"Ganymede, orbiter inside":[-1014,1760,32]} :: 2000-12-28 08:25:26 UTC · CA +0.0 min | range to Ganymede | 1.887 radii | 4971 km | altitude | 2337 km | Ganymede from Jupiter | 14.989 Rj | JSE az | 178.72° | geometric shadow of Jupiter | Ganymede, 
+FLY:C30  :: 2001-05-25 11:23:58 UTC · CA +0.0 min | range to Callisto | 1.055 radii | 2541 km | altitude | 132 km | Callisto from Jupiter | 26.285 Rj† | Callisto’s position relative to Jupiter is not in the data 
+FLY:I31  :: 2001-08-06 04:59:20 UTC · CA +0.0 min | range to Io | 1.108 radii | 2015 km | altitude | 197 km | Io from Jupiter | 5.924 Rj | JSE az | 244.92° | orbiter attitude | ROTATT row 04:59:20.082 (0.1 s from
+FLY:I32  :: 2001-10-16 01:23:20 UTC · CA +0.0 min | range to Io | 1.103 radii | 2006 km | altitude | 188 km | Io from Jupiter | 5.910 Rj | JSE az | 255.60° | orbiter attitude | ROTATT row 01:23:20.086 (0.1 s from
+FLY:I33  :: 2002-01-17 14:08:28 UTC · CA +0.0 min | range to Io | 1.058 radii | 1923 km | altitude | 105 km | Io from Jupiter | 5.901 Rj | JSE az | 200.26° | orbiter attitude | unoriented (nearest ROTATT row 141 
+FLY:A34 {"orbiter inside":[1520,1880,5]} :: 2002-11-05 06:18:40 UTC · CA +0.0 min | range to Amalthea | 2.897 radii | 250 km | altitude | 164 km | Amalthea from Jupiter | 2.537 Rj† | Amalthea’s position relative to Jupiter is not in the data fo
+keyboard: T -900 -> -830 space play true errs []
+ui 1400 {"overflowX":false,"off":[],"hud":[400,344,1040,786]} []
+ui 1024 {"overflowX":false,"off":[],"hud":[400,344,664,634]} []
+ui 390 {"overflowX":false,"off":[],"hud":[370,310,390,705]} []

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Galileo moons and craft</title>
+<link rel="stylesheet" href="src/css/moons.css">
+<script type="importmap">{"imports":{"three":"./src/vendor/three.module.js"}}</script>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Galileo moons and craft <span>· prototype · data-only mapping</span></h1>
+    <label class="k">scene <select id="scene"></select></label>
+    <label class="k">follow <select id="follow"></select></label>
+    <label class="k">tier <button class="sm" id="tierAuto" aria-pressed="true" title="auto: HIGH on a hardware renderer, LOW on a software renderer or a slow frame probe; in auto the HIGH tier lowers its render scale, then drops to LOW, if drawn frames stay slower than 45 ms">auto</button><button class="sm" id="tierLow" aria-pressed="false" title="256×128 nearest textures, voxel craft, no tone mapping">LOW</button><button class="sm" id="tierMed" aria-pressed="false" title="1024×512 textures built in the background, no normal maps, mesh craft with half the segments, pixel ratio up to 1.5">MED</button><button class="sm" id="tierHigh" aria-pressed="false" title="2048×1024 textures built in the background when a body is large on screen, mesh craft, normal maps">HIGH</button></label>
+    <button class="sm" id="glowTog" aria-pressed="false" title="Illustrative glow around the Sun disc; off = true angular size only">Sun glow (not to scale)</button>
+    <button class="sm" id="starTog" aria-pressed="true" title="Illustrative star background">stars</button>
+    <button class="sm" id="atmTog" aria-pressed="true" title="Below-the-cloud-top atmosphere rendering: illustrative; haze density follows NEP XSEC22 and light level follows NFR TCNF where those files have valid rows">atmosphere</button>
+    <button class="sm" id="sideTog" aria-pressed="true">sources</button>
+    <span id="perf">tier <b id="tierName">–</b> · <b id="ms">–</b> ms/frame · <b id="calls">–</b> draws · <b id="tris">–</b> tris · <b id="rend">–</b></span>
+  </header>
+  <div id="stage">
+    <canvas id="gl" tabindex="0" aria-label="3D view. Drag to rotate, scroll or pinch to zoom. Space starts and stops time; left and right arrows step time."></canvas><canvas id="lead"></canvas>
+    <div id="hud"></div>
+    <div id="zoomp"><button class="sm" data-z="craft">zoom: craft</button><button class="sm" data-z="local">zoom: local</button><button class="sm" data-z="system">zoom: system</button></div>
+    <div id="tag">surface textures, craft geometry and star field are illustrative; positions, radii, light direction and times are from the PDS files listed under “sources”</div>
+    <div id="stat" role="status" aria-live="polite"></div>
+    <div id="gate">WebGL is not available in this browser.</div>
+  </div>
+  <aside id="side"></aside>
+  <footer>
+    <button id="play" class="sm" aria-label="Play or pause time" title="Play or pause (Space)">▶</button>
+    <select id="speed" aria-label="Playback speed"></select>
+    <div id="tlwrap"><canvas id="ticks"></canvas><input type="range" id="scrub" min="0" max="10000" value="0" aria-label="Time within the scene window"></div>
+    <span id="clock">—</span>
+  </footer>
+</div>
+<script type="module" src="src/js/main.js"></script>
+</body>
+</html>

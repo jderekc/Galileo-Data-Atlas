@@ -1,0 +1,22 @@
+// The module build must behave like the single-file build: same HUD text, same world positions, same pixels (LOW tier, software renderer).
+// Usage: SINGLE=file:///path/to/moons_viewer.html THREE_DIR=/path/to/node_modules/three node tests/compare_single_file.js
+const { chromium, BASE, ARGS, open } = require('./_lib'); const fs = require('fs'); const zlib = require('zlib');
+const SINGLE = process.env.SINGLE, THREE_DIR = process.env.THREE_DIR;
+function png(buf) { // minimal PNG decoder (8-bit RGB/RGBA, non-interlaced) -> raw bytes
+  let p = 8, w, h, ct, idat = []; while (p < buf.length) { const len = buf.readUInt32BE(p), t = buf.toString('ascii', p + 4, p + 8), d = buf.subarray(p + 8, p + 8 + len); if (t === 'IHDR') { w = d.readUInt32BE(0); h = d.readUInt32BE(4); ct = d[9] } else if (t === 'IDAT') idat.push(d); p += 12 + len }
+  const bpp = ct === 6 ? 4 : 3, raw = zlib.inflateSync(Buffer.concat(idat)), st = w * bpp, out = Buffer.alloc(h * st);
+  for (let y = 0; y < h; y++) { const f = raw[y * (st + 1)], row = raw.subarray(y * (st + 1) + 1, (y + 1) * (st + 1)); for (let x = 0; x < st; x++) { const a = x >= bpp ? out[y * st + x - bpp] : 0, b = y ? out[(y - 1) * st + x] : 0, c = (x >= bpp && y) ? out[(y - 1) * st + x - bpp] : 0; let v = row[x]; if (f === 1) v += a; else if (f === 2) v += b; else if (f === 3) v += (a + b) >> 1; else if (f === 4) { const pa = Math.abs(b - c), pb = Math.abs(a - c), pc = Math.abs(a + b - 2 * c); v += (pa <= pb && pa <= pc) ? a : (pb <= pc ? b : c) } out[y * st + x] = v & 255 } }
+  return { w, h, bpp, data: out } }
+(async () => { const b = await chromium.launch({ args: ARGS }); const res = {};
+  const cases = [['FLY:E4', 0, 'EUROPA', 'local'], ['FLY:A34', 0, 'AMALTHEA', 'local'], ['FLY:G29', -600, 'ORBITER', 'craft'], ['PROBE', 200, 'PROBE', 'craft'], ['PROBE', 700, 'PROBE', 'local'], ['FLY:I0', 300, 'JUPITER', 'local']];
+  for (const kind of ['single', 'modules']) { let pg;
+    if (kind === 'single') { pg = await (await b.newContext({ viewport: { width: 1200, height: 800 } })).newPage(); pg.errs = []; pg.on('pageerror', e => pg.errs.push(e.message));
+      await pg.route('**/*', route => { const u = route.request().url(); if (u.includes('three.min.js')) return route.fulfill({ path: THREE_DIR + '/build/three.min.js', contentType: 'application/javascript' }); if (u.includes('OrbitControls.js')) return route.fulfill({ path: THREE_DIR + '/examples/js/controls/OrbitControls.js', contentType: 'application/javascript' }); return route.continue() });
+      await pg.goto(SINGLE + '#FLY:E4&tier=LOW'); await pg.waitForFunction(() => window.__moons && window.__moons.SCN) } else pg = await open(b, '#FLY:E4&tier=LOW');
+    res[kind] = []; for (const [id, t, fol, z] of cases) { await pg.evaluate(([id, t, fol, z]) => { const M = window.__moons; M.loadScene(id); M.setFollow(fol); M.setT(t); M.zoomTo(z) }, [id, t, fol, z]); await pg.waitForTimeout(1800);
+      const st = await pg.evaluate(() => { const M = window.__moons, w = {}; for (const k in M.WORLD) w[k] = M.WORLD[k].pos.toArray(); return { hud: document.getElementById('hud').innerText, side: document.getElementById('side').innerText.length, world: w, cam: M.cam.position.toArray(), tris: M.renderer.info.render.triangles, calls: M.renderer.info.render.calls } });
+      const shot = await pg.locator('#gl').screenshot(); res[kind].push({ st, shot }) } res[kind].errs = pg.errs; await pg.close() }
+  let fail = 0; cases.forEach((c, i) => { const A = res.single[i], B = res.modules[i]; const hud = A.st.hud === B.st.hud, world = JSON.stringify(A.st.world) === JSON.stringify(B.st.world), cam = JSON.stringify(A.st.cam) === JSON.stringify(B.st.cam), geo = A.st.tris === B.st.tris && A.st.calls === B.st.calls;
+    const pa = png(A.shot), pb = png(B.shot); let diff = 0, maxd = 0; if (pa.data.length === pb.data.length) for (let k = 0; k < pa.data.length; k++) { const d = Math.abs(pa.data[k] - pb.data[k]); if (d) { diff++; if (d > maxd) maxd = d } } else diff = -1;
+    const ok = hud && world && cam && geo && diff === 0; if (!ok) fail++; console.log(c.join(' '), '| HUD equal', hud, '| world equal', world, '| camera equal', cam, '| triangles/draws equal', geo, '(' + A.st.tris + ')', '| differing colour bytes', diff, 'of', pa.data.length, 'max diff', maxd) });
+  console.log('errors single', JSON.stringify(res.single.errs), 'modules', JSON.stringify(res.modules.errs)); await b.close(); process.exit(fail ? 1 : 0) })();
